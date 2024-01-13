@@ -1,6 +1,6 @@
 [package]
 name = "wootili-view"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,3 +9,5 @@ edition = "2021"
 wooting-rgb-sys = "0.3.0"
 screenshots = "0.8.6"
 image = "0.24.8"
+eframe = "0.25.0"
+tray-icon = "0.11.1"
