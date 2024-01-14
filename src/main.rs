@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use eframe::egui;
 use image::{imageops::FilterType, GenericImageView};
 use screenshots::Screen;
@@ -18,14 +20,25 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct MyApp {
+    device_name: String,
     rgb_size: (u32, u32),
     brightness: u8,
     screen: usize,
+    display_rgb_preview: bool,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
         Self {
+            device_name: unsafe {
+                wooting::wooting_usb_disconnect(false);
+                wooting::wooting_usb_find_keyboard();
+
+                let wooting_usb_meta = *wooting::wooting_usb_get_meta();
+                let model = CStr::from_ptr(wooting_usb_meta.model);
+
+                model.to_str().unwrap().to_string()
+            },
             rgb_size: unsafe {
                 wooting::wooting_usb_disconnect(false);
                 wooting::wooting_usb_find_keyboard();
@@ -50,6 +63,7 @@ impl Default for MyApp {
             },
             brightness: 100,
             screen: 0,
+            display_rgb_preview: true,
         }
     }
 }
@@ -83,31 +97,43 @@ impl eframe::App for MyApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Settings");
+            ui.separator();
 
+            ui.heading("Visual");
             ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness"));
             ui.add(egui::Slider::new(&mut self.screen, 0..=screens.len() - 1).text("Screen"));
+            ui.separator();
+
+            ui.heading("Performance");
+            ui.horizontal(|ui| {
+                ui.label("Display RGB Preview");
+                ui.checkbox(&mut self.display_rgb_preview, "");
+            });
 
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
-                ui.heading("Preview Lighting");
-                for y in 0..self.rgb_size.1 {
-                    //add a row
-                    ui.horizontal(|ui| {
-                        for x in 0..self.rgb_size.0 {
-                            let color: egui::Color32 = {
-                                let image::Rgba([r, g, b, _]) = resized_capture.get_pixel(x, y);
+                if self.display_rgb_preview {
+                    ui.heading("Preview Lighting");
+                    for y in 0..self.rgb_size.1 {
+                        ui.horizontal(|ui| {
+                            for x in 0..self.rgb_size.0 {
+                                let color: egui::Color32 = {
+                                    let image::Rgba([r, g, b, _]) = resized_capture.get_pixel(x, y);
 
-                                egui::Color32::from_rgb(r, g, b)
-                            };
+                                    egui::Color32::from_rgb(r, g, b)
+                                };
 
-                            let size = egui::Vec2::new(10.0, 10.0);
-                            let rect = ui.allocate_space(size);
-                            ui.painter().rect_filled(rect.1, 1.0, color);
-                        }
-                    });
+                                let size = egui::Vec2::new(10.0, 10.0);
+                                let rect = ui.allocate_space(size);
+                                ui.painter().rect_filled(rect.1, 1.0, color);
+                            }
+                        });
+                    }
                 }
 
+                ui.heading("Keyboard Info");
+                ui.add(egui::Label::new(format!("Device: {}", self.device_name,)));
                 ui.add(egui::Label::new(format!(
-                    "RGB Size: {} collums and {} rows",
+                    "Lighting Dimentions: {}x{}",
                     self.rgb_size.0, self.rgb_size.1
                 )));
             });
