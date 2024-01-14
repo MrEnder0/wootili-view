@@ -107,7 +107,7 @@ impl eframe::App for MyApp {
                 }
 
                 ui.add(egui::Label::new(format!(
-                    "RGB Size: {} rows and {} collums",
+                    "RGB Size: {} collums and {} rows",
                     self.rgb_size.0, self.rgb_size.1
                 )));
             });
