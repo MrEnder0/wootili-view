@@ -94,10 +94,12 @@ impl eframe::App for MyApp {
 
         let screens = Screen::all().unwrap();
         let capture = screens[0].capture().unwrap();
-        capture.save("temp.png").unwrap();
-
-        let img = image::open("temp.png").unwrap();
+        
+        let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec()).unwrap();
+        let img = image::DynamicImage::ImageRgba8(img);
         let resized_capture = img.resize_exact(self.rgb_size.0, self.rgb_size.1, FilterType::Nearest);
+
+        resized_capture.save("preview.png").unwrap();
 
         // Runs lighting operations
         unsafe {
