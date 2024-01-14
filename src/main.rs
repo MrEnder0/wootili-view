@@ -3,7 +3,7 @@
 use eframe::egui;
 use image::{imageops::FilterType, GenericImageView};
 use screenshots::Screen;
-use std::ffi::CStr;
+use std::{ffi::CStr, fmt::format};
 use wooting_rgb_sys as wooting;
 
 fn main() -> Result<(), eframe::Error> {
@@ -110,6 +110,13 @@ impl eframe::App for MyApp {
                 ui.checkbox(&mut self.display_rgb_preview, "");
             });
 
+            egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    // Add your footer content here
+                    ui.label(format!("Wootili-View {} by Mr.Ender", env!("CARGO_PKG_VERSION")));
+                });
+            });
+
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
                 if self.display_rgb_preview {
                     ui.heading("Preview Lighting");
@@ -128,9 +135,11 @@ impl eframe::App for MyApp {
                             }
                         });
                     }
+
+                    ui.separator();
                 }
 
-                ui.heading("Keyboard Info");
+                ui.heading("Device Info");
                 ui.add(egui::Label::new(format!("Device: {}", self.device_name,)));
                 ui.add(egui::Label::new(format!(
                     "Lighting Dimentions: {}x{}",
