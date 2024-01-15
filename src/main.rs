@@ -153,8 +153,7 @@ impl eframe::App for MyApp {
             ui.heading("Performance");
             ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)"));
             ui.horizontal(|ui| {
-                ui.label("Display RGB Preview");
-                ui.checkbox(&mut self.display_rgb_preview, "");
+                ui.checkbox(&mut self.display_rgb_preview, "Display RGB Preview").on_disabled_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
             });
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
