@@ -1,5 +1,7 @@
 # Wootili-View
 
+![app_preview](https://github.com/MrEnder0/wootili-view/blob/master/.github/media/app_preview.png?raw=true)
+
 ## About
 
 This project allows you to map a downscalled version of your screen onto your wooting keyboard for a dynamic lighting effect.

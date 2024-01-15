@@ -3,7 +3,7 @@
 use eframe::egui;
 use image::{imageops::FilterType, GenericImageView};
 use screenshots::Screen;
-use std::{ffi::CStr, fmt::format};
+use std::ffi::CStr;
 use wooting_rgb_sys as wooting;
 
 fn main() -> Result<(), eframe::Error> {
