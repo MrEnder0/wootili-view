@@ -23,9 +23,12 @@ struct MyApp {
     device_name: String,
     rgb_size: (u32, u32),
     brightness: u8,
+    reduce_bright_effects: bool,
+    current_frame_reduce: bool,
     screen: usize,
     display_rgb_preview: bool,
     downscale_method: FilterType,
+    frame_sleep: u64,
 }
 
 impl Default for MyApp {
@@ -63,9 +66,12 @@ impl Default for MyApp {
                 }
             },
             brightness: 100,
+            reduce_bright_effects: false,
+            current_frame_reduce: false,
             screen: 0,
             display_rgb_preview: true,
-            downscale_method: FilterType::Lanczos3,
+            downscale_method: FilterType::Triangle,
+            frame_sleep: 10,
         }
     }
 }
@@ -81,6 +87,21 @@ impl eframe::App for MyApp {
         let img = image::DynamicImage::ImageRgba8(img);
         let resized_capture =
             img.resize_exact(self.rgb_size.0, self.rgb_size.1, self.downscale_method);
+
+        if self.reduce_bright_effects {
+            let avg_screen = img.resize(
+                1,
+                1,
+                image::imageops::FilterType::Triangle,
+            );
+
+            let image::Rgba([r, g, b, _]) = avg_screen.get_pixel(0, 0);
+
+            if r > 220 || g > 220 || b > 220 {
+                self.current_frame_reduce = true;
+                self.brightness -= 50;
+            }
+        }
 
         // Runs lighting operations
         unsafe {
@@ -98,43 +119,39 @@ impl eframe::App for MyApp {
             wooting::wooting_rgb_array_update_keyboard();
         }
 
+        if self.current_frame_reduce {
+            self.brightness += 50;
+            self.current_frame_reduce = false;
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Settings");
             ui.separator();
 
             ui.heading("Visual");
-            ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness"));
-            ui.add(egui::Slider::new(&mut self.screen, 0..=screens.len() - 1).text("Screen"));
+            ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_disabled_hover_text("Adjust the brightness of the lighting");
+            ui.add(egui::Slider::new(&mut self.screen, 0..=screens.len() - 1).text("Screen")).on_disabled_hover_text("Select the screen to capture");
+            ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_disabled_hover_text("Reduces brightness when the screen is very bright");
             ui.menu_button("Downscale Method", |ui| {
-                ui.selectable_value(
-                    &mut self.downscale_method,
-                    FilterType::Nearest,
-                    "Nearest",
-                );
-                ui.selectable_value(
-                    &mut self.downscale_method,
-                    FilterType::Triangle,
-                    "Triangle",
-                );
+                ui.selectable_value(&mut self.downscale_method, FilterType::Nearest, "Nearest")
+                    .on_hover_text("Fast and picks on up on small details but is inconsistent");
+                ui.selectable_value(&mut self.downscale_method, FilterType::Triangle, "Triangle")
+                    .on_hover_text("Overall good results and is fast, best speed to quality ratio");
+                ui.selectable_value(&mut self.downscale_method, FilterType::Gaussian, "Gaussian")
+                    .on_hover_text("Has a softer look with its blur effect, looks nice");
                 ui.selectable_value(
                     &mut self.downscale_method,
                     FilterType::CatmullRom,
                     "CatmullRom",
-                );
-                ui.selectable_value(
-                    &mut self.downscale_method,
-                    FilterType::Gaussian,
-                    "Gaussian",
-                );
-                ui.selectable_value(
-                    &mut self.downscale_method,
-                    FilterType::Lanczos3,
-                    "Lanczos3",
-                );
+                )
+                .on_hover_text("Good results but is slow, similar results to Lanczos3");
+                ui.selectable_value(&mut self.downscale_method, FilterType::Lanczos3, "Lanczos3")
+                    .on_hover_text("Gives the best results but is very slow");
             });
             ui.separator();
 
             ui.heading("Performance");
+            ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)"));
             ui.horizontal(|ui| {
                 ui.label("Display RGB Preview");
                 ui.checkbox(&mut self.display_rgb_preview, "");
@@ -143,7 +160,10 @@ impl eframe::App for MyApp {
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     // Add your footer content here
-                    ui.label(format!("Wootili-View {} by Mr.Ender", env!("CARGO_PKG_VERSION")));
+                    ui.label(format!(
+                        "Wootili-View {} by Mr.Ender",
+                        env!("CARGO_PKG_VERSION")
+                    ));
                 });
             });
 
@@ -178,7 +198,7 @@ impl eframe::App for MyApp {
             });
         });
 
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(self.frame_sleep));
         ctx.request_repaint()
     }
 
