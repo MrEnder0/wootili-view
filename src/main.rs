@@ -25,6 +25,7 @@ struct MyApp {
     brightness: u8,
     screen: usize,
     display_rgb_preview: bool,
+    downscale_method: FilterType,
 }
 
 impl Default for MyApp {
@@ -64,12 +65,14 @@ impl Default for MyApp {
             brightness: 100,
             screen: 0,
             display_rgb_preview: true,
+            downscale_method: FilterType::Lanczos3,
         }
     }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        //TODO: Find way to run this seprately from the main loop due to this being the bulk of the cpu usage
         let screens = Screen::all().unwrap();
         let capture = screens[self.screen].capture().unwrap();
 
@@ -77,7 +80,7 @@ impl eframe::App for MyApp {
             .unwrap();
         let img = image::DynamicImage::ImageRgba8(img);
         let resized_capture =
-            img.resize_exact(self.rgb_size.0, self.rgb_size.1, FilterType::Nearest);
+            img.resize_exact(self.rgb_size.0, self.rgb_size.1, self.downscale_method);
 
         // Runs lighting operations
         unsafe {
@@ -102,6 +105,33 @@ impl eframe::App for MyApp {
             ui.heading("Visual");
             ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness"));
             ui.add(egui::Slider::new(&mut self.screen, 0..=screens.len() - 1).text("Screen"));
+            ui.menu_button("Downscale Method", |ui| {
+                ui.selectable_value(
+                    &mut self.downscale_method,
+                    FilterType::Nearest,
+                    "Nearest",
+                );
+                ui.selectable_value(
+                    &mut self.downscale_method,
+                    FilterType::Triangle,
+                    "Triangle",
+                );
+                ui.selectable_value(
+                    &mut self.downscale_method,
+                    FilterType::CatmullRom,
+                    "CatmullRom",
+                );
+                ui.selectable_value(
+                    &mut self.downscale_method,
+                    FilterType::Gaussian,
+                    "Gaussian",
+                );
+                ui.selectable_value(
+                    &mut self.downscale_method,
+                    FilterType::Lanczos3,
+                    "Lanczos3",
+                );
+            });
             ui.separator();
 
             ui.heading("Performance");
