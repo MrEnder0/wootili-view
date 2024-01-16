@@ -1,7 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
-use image::{imageops::FilterType, GenericImageView, DynamicImage};
+use egui_notify::Toasts;
+use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use once_cell::sync::Lazy;
 use screenshots::Screen;
 use std::{ffi::CStr, sync::Mutex};
@@ -9,7 +10,7 @@ use wooting_rgb_sys as wooting;
 
 // Statics for screen thread
 static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
-    let img = image::ImageBuffer::new(1, 1); 
+    let img = image::ImageBuffer::new(1, 1);
     image::DynamicImage::ImageRgba8(img)
 }));
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
@@ -23,21 +24,20 @@ fn main() -> Result<(), eframe::Error> {
     }
 
     // Screen thread, captures the screen and stores it in the static SCREEN
-    std::thread::spawn(|| {
-        loop {
-            let screens = Screen::all().unwrap();
-            let capture = screens[*SCREEN_INDEX.lock().unwrap()].capture().unwrap();
+    std::thread::spawn(|| loop {
+        let screens = Screen::all().unwrap();
+        let capture = screens[*SCREEN_INDEX.lock().unwrap()].capture().unwrap();
 
-            let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-                .unwrap();
-            let img = image::DynamicImage::ImageRgba8(img);
-            let resized_capture =
-                img.resize_exact(21, 6, *DOWNSCALE_METHOD.lock().unwrap());
+        let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
+            .unwrap();
+        let img = image::DynamicImage::ImageRgba8(img);
+        let resized_capture = img.resize_exact(21, 6, *DOWNSCALE_METHOD.lock().unwrap());
 
-            SCREEN.lock().unwrap().clone_from(&resized_capture);
+        SCREEN.lock().unwrap().clone_from(&resized_capture);
 
-            std::thread::sleep(std::time::Duration::from_millis(*FRAME_SLEEP.lock().unwrap()));
-        }
+        std::thread::sleep(std::time::Duration::from_millis(
+            *FRAME_SLEEP.lock().unwrap(),
+        ));
     });
 
     eframe::run_native(
@@ -57,6 +57,8 @@ struct MyApp {
     display_rgb_preview: bool,
     downscale_method: FilterType,
     frame_sleep: u64,
+    toasts: Toasts,
+    init: bool,
 }
 
 impl Default for MyApp {
@@ -100,36 +102,20 @@ impl Default for MyApp {
             display_rgb_preview: true,
             downscale_method: FilterType::Triangle,
             frame_sleep: 10,
+            toasts: Toasts::default(),
+            init: true,
         }
     }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        //TODO: Find way to run this seprately from the main loop due to this being the bulk of the cpu usage
-        /*let screens = Screen::all().unwrap();
-        let capture = screens[self.screen].capture().unwrap();
-
-        let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-            .unwrap();
-        let img = image::DynamicImage::ImageRgba8(img);
-        let resized_capture =
-            img.resize_exact(self.rgb_size.0, self.rgb_size.1, self.downscale_method);
-
-        if self.reduce_bright_effects {
-            let avg_screen = img.resize(
-                1,
-                1,
-                image::imageops::FilterType::Triangle,
-            );
-
-            let image::Rgba([r, g, b, _]) = avg_screen.get_pixel(0, 0);
-
-            if r > 220 || g > 220 || b > 220 {
-                self.current_frame_reduce = true;
-                self.brightness -= 50;
-            }
-        }*/
+        if self.init {
+            self.toasts
+                .success(format!("Connected to {}", self.device_name))
+                .set_duration(Some(std::time::Duration::from_secs(2)));
+            self.init = false;
+        }
 
         let resized_capture = SCREEN.lock().unwrap().clone();
 
@@ -252,6 +238,9 @@ impl eframe::App for MyApp {
             });
         });
 
+        self.toasts.show(ctx);
+
+        std::thread::sleep(std::time::Duration::from_millis(10));
         ctx.request_repaint()
     }
 
