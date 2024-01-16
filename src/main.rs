@@ -1,16 +1,44 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
-use image::{imageops::FilterType, GenericImageView};
+use image::{imageops::FilterType, GenericImageView, DynamicImage};
+use once_cell::sync::Lazy;
 use screenshots::Screen;
-use std::ffi::CStr;
+use std::{ffi::CStr, sync::Mutex};
 use wooting_rgb_sys as wooting;
+
+// Statics for screen thread
+static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
+    let img = image::ImageBuffer::new(1, 1); 
+    image::DynamicImage::ImageRgba8(img)
+}));
+static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
+static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
+static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
 
 fn main() -> Result<(), eframe::Error> {
     // Run to reset rgb
     unsafe {
         wooting::wooting_rgb_array_update_keyboard();
     }
+
+    // Screen thread, captures the screen and stores it in the static SCREEN
+    std::thread::spawn(|| {
+        loop {
+            let screens = Screen::all().unwrap();
+            let capture = screens[*SCREEN_INDEX.lock().unwrap()].capture().unwrap();
+
+            let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
+                .unwrap();
+            let img = image::DynamicImage::ImageRgba8(img);
+            let resized_capture =
+                img.resize_exact(21, 6, *DOWNSCALE_METHOD.lock().unwrap());
+
+            SCREEN.lock().unwrap().clone_from(&resized_capture);
+
+            std::thread::sleep(std::time::Duration::from_millis(*FRAME_SLEEP.lock().unwrap()));
+        }
+    });
 
     eframe::run_native(
         "Wootili-View",
@@ -79,7 +107,7 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         //TODO: Find way to run this seprately from the main loop due to this being the bulk of the cpu usage
-        let screens = Screen::all().unwrap();
+        /*let screens = Screen::all().unwrap();
         let capture = screens[self.screen].capture().unwrap();
 
         let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
@@ -101,7 +129,9 @@ impl eframe::App for MyApp {
                 self.current_frame_reduce = true;
                 self.brightness -= 50;
             }
-        }
+        }*/
+
+        let resized_capture = SCREEN.lock().unwrap().clone();
 
         // Runs lighting operations
         unsafe {
@@ -130,28 +160,53 @@ impl eframe::App for MyApp {
 
             ui.heading("Visual");
             ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_disabled_hover_text("Adjust the brightness of the lighting");
-            ui.add(egui::Slider::new(&mut self.screen, 0..=screens.len() - 1).text("Screen")).on_disabled_hover_text("Select the screen to capture");
+            if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_disabled_hover_text("Select the screen to capture").changed() {
+                *SCREEN_INDEX.lock().unwrap() = self.screen;
+            }
             ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_disabled_hover_text("Reduces brightness when the screen is very bright");
             ui.menu_button("Downscale Method", |ui| {
-                ui.selectable_value(&mut self.downscale_method, FilterType::Nearest, "Nearest")
-                    .on_hover_text("Fast and picks on up on small details but is inconsistent");
-                ui.selectable_value(&mut self.downscale_method, FilterType::Triangle, "Triangle")
-                    .on_hover_text("Overall good results and is fast, best speed to quality ratio");
-                ui.selectable_value(&mut self.downscale_method, FilterType::Gaussian, "Gaussian")
-                    .on_hover_text("Has a softer look with its blur effect, looks nice");
-                ui.selectable_value(
-                    &mut self.downscale_method,
-                    FilterType::CatmullRom,
+                if ui.add(egui::SelectableLabel::new(
+                    self.downscale_method == FilterType::Nearest,
+                    "Nearest",
+                )).on_disabled_hover_text("Fast and picks on up on small details but is inconsistent").clicked() {
+                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Nearest);
+                    self.downscale_method = FilterType::Nearest;
+                }
+                if ui.add(egui::SelectableLabel::new(
+                    self.downscale_method == FilterType::Triangle,
+                    "Triangle",
+                )).on_disabled_hover_text("Overall good results and is fast, best speed to quality ratio").clicked() {
+                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Triangle);
+                    self.downscale_method = FilterType::Triangle;
+                }
+                if ui.add(egui::SelectableLabel::new(
+                    self.downscale_method == FilterType::Gaussian,
+                    "Gaussian",
+                )).on_disabled_hover_text("Has a softer look with its blur effect, looks nice").clicked() {
+                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Gaussian);
+                    self.downscale_method = FilterType::Gaussian;
+                }
+                if ui.add(egui::SelectableLabel::new(
+                    self.downscale_method == FilterType::CatmullRom,
                     "CatmullRom",
-                )
-                .on_hover_text("Good results but is slow, similar results to Lanczos3");
-                ui.selectable_value(&mut self.downscale_method, FilterType::Lanczos3, "Lanczos3")
-                    .on_hover_text("Gives the best results but is very slow");
+                )).on_disabled_hover_text("Good results but is slow, similar results to Lanczos3").clicked() {
+                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::CatmullRom);
+                    self.downscale_method = FilterType::CatmullRom;
+                }
+                if ui.add(egui::SelectableLabel::new(
+                    self.downscale_method == FilterType::Lanczos3,
+                    "Lanczos3",
+                )).on_disabled_hover_text("Gives the best results but is very slow").clicked() {
+                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Lanczos3);
+                    self.downscale_method = FilterType::Lanczos3;
+                }
             });
             ui.separator();
 
             ui.heading("Performance");
-            ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)"));
+            if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).changed() {
+                *FRAME_SLEEP.lock().unwrap() = self.frame_sleep;
+            }
             ui.horizontal(|ui| {
                 ui.checkbox(&mut self.display_rgb_preview, "Display RGB Preview").on_disabled_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
             });
@@ -197,7 +252,6 @@ impl eframe::App for MyApp {
             });
         });
 
-        std::thread::sleep(std::time::Duration::from_millis(self.frame_sleep));
         ctx.request_repaint()
     }
 

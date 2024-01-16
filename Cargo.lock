@@ -3459,10 +3459,11 @@ dependencies = [
 
 [[package]]
 name = "wootili-view"
-version = "0.2.8"
+version = "0.3.0"
 dependencies = [
  "eframe",
  "image",
+ "once_cell",
  "screenshots",
  "wooting-rgb-sys",
 ]
