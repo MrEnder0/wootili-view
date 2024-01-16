@@ -50,6 +50,7 @@ fn main() -> Result<(), eframe::Error> {
 struct MyApp {
     device_name: String,
     rgb_size: (u32, u32),
+    device_creation: String,
     brightness: u8,
     reduce_bright_effects: bool,
     current_frame_reduce: bool,
@@ -94,6 +95,18 @@ impl Default for MyApp {
                         (0, 0)
                     }
                 }
+            },
+            device_creation: unsafe {
+                let len = u8::MAX as usize + 3;
+                let mut buff = vec![0u8; len];
+                wooting::wooting_usb_send_feature_with_response(
+                    buff.as_mut_ptr(), len, 3, 0, 0, 0, 0
+                );
+
+                let year: u16 = 2000 + buff[7] as u16;
+                let week = buff[8];
+
+                format!("{} Week {}", year, week)
             },
             brightness: 100,
             reduce_bright_effects: false,
@@ -145,44 +158,44 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Visual");
-            ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_disabled_hover_text("Adjust the brightness of the lighting");
-            if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_disabled_hover_text("Select the screen to capture").changed() {
+            ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting");
+            if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 *SCREEN_INDEX.lock().unwrap() = self.screen;
             }
-            ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_disabled_hover_text("Reduces brightness when the screen is very bright");
+            ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright");
             ui.menu_button("Downscale Method", |ui| {
                 if ui.add(egui::SelectableLabel::new(
                     self.downscale_method == FilterType::Nearest,
                     "Nearest",
-                )).on_disabled_hover_text("Fast and picks on up on small details but is inconsistent").clicked() {
+                )).on_hover_text("Fast and picks on up on small details but is inconsistent").clicked() {
                     DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Nearest);
                     self.downscale_method = FilterType::Nearest;
                 }
                 if ui.add(egui::SelectableLabel::new(
                     self.downscale_method == FilterType::Triangle,
                     "Triangle",
-                )).on_disabled_hover_text("Overall good results and is fast, best speed to quality ratio").clicked() {
+                )).on_hover_text("Overall good results and is fast, best speed to quality ratio").clicked() {
                     DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Triangle);
                     self.downscale_method = FilterType::Triangle;
                 }
                 if ui.add(egui::SelectableLabel::new(
                     self.downscale_method == FilterType::Gaussian,
                     "Gaussian",
-                )).on_disabled_hover_text("Has a softer look with its blur effect, looks nice").clicked() {
+                )).on_hover_text("Has a softer look with its blur effect, looks nice").clicked() {
                     DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Gaussian);
                     self.downscale_method = FilterType::Gaussian;
                 }
                 if ui.add(egui::SelectableLabel::new(
                     self.downscale_method == FilterType::CatmullRom,
                     "CatmullRom",
-                )).on_disabled_hover_text("Good results but is slow, similar results to Lanczos3").clicked() {
+                )).on_hover_text("Good results but is slow, similar results to Lanczos3").clicked() {
                     DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::CatmullRom);
                     self.downscale_method = FilterType::CatmullRom;
                 }
                 if ui.add(egui::SelectableLabel::new(
                     self.downscale_method == FilterType::Lanczos3,
                     "Lanczos3",
-                )).on_disabled_hover_text("Gives the best results but is very slow").clicked() {
+                )).on_hover_text("Gives the best results but is very slow").clicked() {
                     DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Lanczos3);
                     self.downscale_method = FilterType::Lanczos3;
                 }
@@ -190,20 +203,19 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Performance");
-            if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).changed() {
+            if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before recapturing a new frame").changed() {
                 *FRAME_SLEEP.lock().unwrap() = self.frame_sleep;
             }
             ui.horizontal(|ui| {
-                ui.checkbox(&mut self.display_rgb_preview, "Display RGB Preview").on_disabled_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
+                ui.checkbox(&mut self.display_rgb_preview, "Display RGB Preview").on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
             });
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    // Add your footer content here
-                    ui.label(format!(
+                    ui.hyperlink_to(format!(
                         "Wootili-View {} by Mr.Ender",
                         env!("CARGO_PKG_VERSION")
-                    ));
+                    ), "https://github.com/MrEnder0/Wootili-View");
                 });
             });
 
@@ -230,7 +242,8 @@ impl eframe::App for MyApp {
                 }
 
                 ui.heading("Device Info");
-                ui.add(egui::Label::new(format!("Device: {}", self.device_name,)));
+                ui.add(egui::Label::new(format!("Name: {}", self.device_name,)));
+                ui.label(format!("Creation: {}", self.device_creation));
                 ui.add(egui::Label::new(format!(
                     "Lighting Dimentions: {}x{}",
                     self.rgb_size.0, self.rgb_size.1
