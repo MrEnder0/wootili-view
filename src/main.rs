@@ -16,30 +16,27 @@ static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
 static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
 static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
-static RGB_SIZE: Lazy<(u32, u32)> = Lazy::new(|| { unsafe {
-    wooting::wooting_usb_disconnect(false);
-    wooting::wooting_usb_find_keyboard();
+static RGB_SIZE: Lazy<(u32, u32)> = Lazy::new(|| {
+    unsafe {
+        wooting::wooting_usb_disconnect(false);
+        wooting::wooting_usb_find_keyboard();
 
-    let wooting_usb_meta = *wooting::wooting_usb_get_meta();
-    let model = CStr::from_ptr(wooting_usb_meta.model);
+        let wooting_usb_meta = *wooting::wooting_usb_get_meta();
+        let model = CStr::from_ptr(wooting_usb_meta.model);
 
-    match model.to_str().unwrap() {
-        //TODO: Verify these sizes for the one two and uwu
-        "Wooting One" => (17, 6),
-        "Wooting Two"
-        | "Wooting Two LE"
-        | "Wooting Two HE"
-        | "Wooting Two HE (ARM)" => (21, 6),
-        "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
-        "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
-        _ => {
-            println!("Unsupported keyboard model: {}", model.to_str().unwrap());
-            (0, 0)
+        match model.to_str().unwrap() {
+            //TODO: Verify these sizes for the one two and uwu
+            "Wooting One" => (17, 6),
+            "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => (21, 6),
+            "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
+            "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
+            _ => {
+                println!("Unsupported keyboard model: {}", model.to_str().unwrap());
+                (0, 0)
+            }
         }
     }
-}
 });
-
 
 fn main() -> Result<(), eframe::Error> {
     // Run to reset rgb
@@ -55,7 +52,8 @@ fn main() -> Result<(), eframe::Error> {
         let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
             .unwrap();
         let img = image::DynamicImage::ImageRgba8(img);
-        let resized_capture = img.resize_exact(RGB_SIZE.0, RGB_SIZE.1, *DOWNSCALE_METHOD.lock().unwrap());
+        let resized_capture =
+            img.resize_exact(RGB_SIZE.0, RGB_SIZE.1, *DOWNSCALE_METHOD.lock().unwrap());
 
         SCREEN.lock().unwrap().clone_from(&resized_capture);
 
@@ -101,7 +99,13 @@ impl Default for MyApp {
                 let len = u8::MAX as usize + 3;
                 let mut buff = vec![0u8; len];
                 wooting::wooting_usb_send_feature_with_response(
-                    buff.as_mut_ptr(), len, 3, 0, 0, 0, 0
+                    buff.as_mut_ptr(),
+                    len,
+                    3,
+                    0,
+                    0,
+                    0,
+                    0,
                 );
 
                 let year: u16 = 2000 + buff[7] as u16;
@@ -125,9 +129,19 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.init {
-            self.toasts
-                .success(format!("Connected to {}", self.device_name))
-                .set_duration(Some(std::time::Duration::from_secs(2)));
+            match self.device_name.as_str() {
+                "N/A" => {
+                    self.toasts
+                        .error("No Wooting Device Found")
+                        .set_duration(Some(std::time::Duration::from_secs(5)));
+                }
+                _ => {
+                    self.toasts
+                        .success(format!("Connected to {}", self.device_name))
+                        .set_duration(Some(std::time::Duration::from_secs(3)));
+                }
+            };
+
             self.init = false;
         }
 
