@@ -4,11 +4,11 @@
 
 ## About
 
-This project allows you to map a downscalled version of your screen onto your wooting keyboard for a dynamic lighting effect.
+Wootili-View is a project designed to enhance your Wooting device by providing an ambient lighting effect. This software allows you to map a downscaled version of your screen onto your Wooting keyboard, creating a dynamic and immersive ambilight experience.
 
 ## How It Works
 
-This process it pretty simple. The program takes a screenshot of your screen, downscales it to the size of your keyboard, and then maps the colors of the screenshot to the keys on your keyboard.
+The functionality of this project is straightforward. The program captures screenshots of your specified display, downscaling them to match the size of your Wooting device's RGB layout. Subsequently, it maps the colors from the downscaled screenshots to the corresponding keys on your Wooting device, producing a captivating ambilight effect.
 
 ## Getting Started
 
