@@ -16,6 +16,30 @@ static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
 static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
 static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
+static RGB_SIZE: Lazy<(u32, u32)> = Lazy::new(|| { unsafe {
+    wooting::wooting_usb_disconnect(false);
+    wooting::wooting_usb_find_keyboard();
+
+    let wooting_usb_meta = *wooting::wooting_usb_get_meta();
+    let model = CStr::from_ptr(wooting_usb_meta.model);
+
+    match model.to_str().unwrap() {
+        //TODO: Verify these sizes for the one two and uwu
+        "Wooting One" => (17, 6),
+        "Wooting Two"
+        | "Wooting Two LE"
+        | "Wooting Two HE"
+        | "Wooting Two HE (ARM)" => (21, 6),
+        "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
+        "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
+        _ => {
+            println!("Unsupported keyboard model: {}", model.to_str().unwrap());
+            (0, 0)
+        }
+    }
+}
+});
+
 
 fn main() -> Result<(), eframe::Error> {
     // Run to reset rgb
@@ -31,7 +55,7 @@ fn main() -> Result<(), eframe::Error> {
         let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
             .unwrap();
         let img = image::DynamicImage::ImageRgba8(img);
-        let resized_capture = img.resize_exact(21, 6, *DOWNSCALE_METHOD.lock().unwrap());
+        let resized_capture = img.resize_exact(RGB_SIZE.0, RGB_SIZE.1, *DOWNSCALE_METHOD.lock().unwrap());
 
         SCREEN.lock().unwrap().clone_from(&resized_capture);
 
@@ -49,7 +73,6 @@ fn main() -> Result<(), eframe::Error> {
 
 struct MyApp {
     device_name: String,
-    rgb_size: (u32, u32),
     device_creation: String,
     brightness: u8,
     reduce_bright_effects: bool,
@@ -73,28 +96,6 @@ impl Default for MyApp {
                 let model = CStr::from_ptr(wooting_usb_meta.model);
 
                 model.to_str().unwrap().to_string()
-            },
-            rgb_size: unsafe {
-                wooting::wooting_usb_disconnect(false);
-                wooting::wooting_usb_find_keyboard();
-
-                let wooting_usb_meta = *wooting::wooting_usb_get_meta();
-                let model = CStr::from_ptr(wooting_usb_meta.model);
-
-                match model.to_str().unwrap() {
-                    //TODO: Verify these sizes for the one two and uwu
-                    "Wooting One" => (17, 6),
-                    "Wooting Two"
-                    | "Wooting Two LE"
-                    | "Wooting Two HE"
-                    | "Wooting Two HE (ARM)" => (21, 6),
-                    "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
-                    "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
-                    _ => {
-                        println!("Unsupported keyboard model: {}", model.to_str().unwrap());
-                        (0, 0)
-                    }
-                }
             },
             device_creation: unsafe {
                 let len = u8::MAX as usize + 3;
@@ -222,9 +223,9 @@ impl eframe::App for MyApp {
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
                 if self.display_rgb_preview {
                     ui.heading("Preview Lighting");
-                    for y in 0..self.rgb_size.1 {
+                    for y in 0..RGB_SIZE.1 {
                         ui.horizontal(|ui| {
-                            for x in 0..self.rgb_size.0 {
+                            for x in 0..RGB_SIZE.0 {
                                 let color: egui::Color32 = {
                                     let image::Rgba([r, g, b, _]) = resized_capture.get_pixel(x, y);
 
@@ -246,7 +247,7 @@ impl eframe::App for MyApp {
                 ui.label(format!("Creation: {}", self.device_creation));
                 ui.add(egui::Label::new(format!(
                     "Lighting Dimentions: {}x{}",
-                    self.rgb_size.0, self.rgb_size.1
+                    RGB_SIZE.0, RGB_SIZE.1
                 )));
             });
         });
