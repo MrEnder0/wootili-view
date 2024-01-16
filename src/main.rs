@@ -111,7 +111,11 @@ impl Default for MyApp {
                 let year: u16 = 2000 + buff[7] as u16;
                 let week = buff[8];
 
-                format!("{} Week {}", year, week)
+                if year == 2000 && week == 0 {
+                    "N/A".to_string()
+                } else {
+                    format!("{} Week {}", year, week)
+                }
             },
             brightness: 100,
             reduce_bright_effects: false,
@@ -259,9 +263,15 @@ impl eframe::App for MyApp {
                 ui.heading("Device Info");
                 ui.add(egui::Label::new(format!("Name: {}", self.device_name,)));
                 ui.label(format!("Creation: {}", self.device_creation));
+
+                let lighting_dimensions = if RGB_SIZE.0 == 0 && RGB_SIZE.1 == 0 {
+                    "Unknown".to_string()
+                } else {
+                    format!("{}x{}", RGB_SIZE.0, RGB_SIZE.1)
+                };
                 ui.add(egui::Label::new(format!(
-                    "Lighting Dimentions: {}x{}",
-                    RGB_SIZE.0, RGB_SIZE.1
+                    "Lighting Dimensions: {}",
+                    lighting_dimensions
                 )));
             });
         });
