@@ -1,12 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ui;
+mod wooting;
+
 use eframe::egui;
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use once_cell::sync::Lazy;
 use screenshots::Screen;
-use std::{ffi::CStr, sync::Mutex};
-use wooting_rgb_sys as wooting;
+use std::sync::Mutex;
+use ui::downscale_label;
 
 // Statics for screen thread
 static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
@@ -16,33 +19,10 @@ static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
 static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
 static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
-static RGB_SIZE: Lazy<(u32, u32)> = Lazy::new(|| {
-    unsafe {
-        wooting::wooting_usb_disconnect(false);
-        wooting::wooting_usb_find_keyboard();
-
-        let wooting_usb_meta = *wooting::wooting_usb_get_meta();
-        let model = CStr::from_ptr(wooting_usb_meta.model);
-
-        match model.to_str().unwrap() {
-            //TODO: Verify these sizes for the one two and uwu
-            "Wooting One" => (17, 6),
-            "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => (21, 6),
-            "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
-            "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
-            _ => {
-                println!("Unsupported keyboard model: {}", model.to_str().unwrap());
-                (0, 0)
-            }
-        }
-    }
-});
+static RGB_SIZE: Lazy<(u32, u32)> = Lazy::new(wooting::get_rgb_size);
 
 fn main() -> Result<(), eframe::Error> {
-    // Run to reset rgb
-    unsafe {
-        wooting::wooting_rgb_array_update_keyboard();
-    }
+    wooting::update_rgb();
 
     // Screen thread, captures the screen and stores it in the static SCREEN
     std::thread::spawn(|| loop {
@@ -86,37 +66,8 @@ struct MyApp {
 impl Default for MyApp {
     fn default() -> Self {
         Self {
-            device_name: unsafe {
-                wooting::wooting_usb_disconnect(false);
-                wooting::wooting_usb_find_keyboard();
-
-                let wooting_usb_meta = *wooting::wooting_usb_get_meta();
-                let model = CStr::from_ptr(wooting_usb_meta.model);
-
-                model.to_str().unwrap().to_string()
-            },
-            device_creation: unsafe {
-                let len = u8::MAX as usize + 3;
-                let mut buff = vec![0u8; len];
-                wooting::wooting_usb_send_feature_with_response(
-                    buff.as_mut_ptr(),
-                    len,
-                    3,
-                    0,
-                    0,
-                    0,
-                    0,
-                );
-
-                let year: u16 = 2000 + buff[7] as u16;
-                let week = buff[8];
-
-                if year == 2000 && week == 0 {
-                    "N/A".to_string()
-                } else {
-                    format!("{} Week {}", year, week)
-                }
-            },
+            device_name: wooting::get_device_name(),
+            device_creation: wooting::get_device_creation(),
             brightness: 100,
             reduce_bright_effects: false,
             current_frame_reduce: false,
@@ -151,21 +102,21 @@ impl eframe::App for MyApp {
 
         let resized_capture = SCREEN.lock().unwrap().clone();
 
-        // Runs lighting operations
-        unsafe {
-            for (x, y, pixel) in resized_capture.pixels() {
-                let image::Rgba([r, g, b, _]) = pixel;
-                wooting::wooting_rgb_array_set_single(
-                    y as u8 + 1,
-                    x as u8,
-                    (r as f32 * (self.brightness as f32 * 0.01)).round() as u8,
-                    (g as f32 * (self.brightness as f32 * 0.01)).round() as u8,
-                    (b as f32 * (self.brightness as f32 * 0.01)).round() as u8,
-                );
-            }
+        if self.reduce_bright_effects {
+            let avg_screen =
+                resized_capture
+                    .clone()
+                    .resize(1, 1, image::imageops::FilterType::Gaussian);
 
-            wooting::wooting_rgb_array_update_keyboard();
+            let image::Rgba([r, g, b, _]) = avg_screen.get_pixel(0, 0);
+
+            if r > 220 || g > 220 || b > 220 {
+                self.current_frame_reduce = true;
+                self.brightness -= 50;
+            }
         }
+
+        wooting::draw_rgb(resized_capture.clone(), self.brightness);
 
         if self.current_frame_reduce {
             self.brightness += 50;
@@ -183,41 +134,11 @@ impl eframe::App for MyApp {
             }
             ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright");
             ui.menu_button("Downscale Method", |ui| {
-                if ui.add(egui::SelectableLabel::new(
-                    self.downscale_method == FilterType::Nearest,
-                    "Nearest",
-                )).on_hover_text("Fast and picks on up on small details but is inconsistent").clicked() {
-                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Nearest);
-                    self.downscale_method = FilterType::Nearest;
-                }
-                if ui.add(egui::SelectableLabel::new(
-                    self.downscale_method == FilterType::Triangle,
-                    "Triangle",
-                )).on_hover_text("Overall good results and is fast, best speed to quality ratio").clicked() {
-                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Triangle);
-                    self.downscale_method = FilterType::Triangle;
-                }
-                if ui.add(egui::SelectableLabel::new(
-                    self.downscale_method == FilterType::Gaussian,
-                    "Gaussian",
-                )).on_hover_text("Has a softer look with its blur effect, looks nice").clicked() {
-                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Gaussian);
-                    self.downscale_method = FilterType::Gaussian;
-                }
-                if ui.add(egui::SelectableLabel::new(
-                    self.downscale_method == FilterType::CatmullRom,
-                    "CatmullRom",
-                )).on_hover_text("Good results but is slow, similar results to Lanczos3").clicked() {
-                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::CatmullRom);
-                    self.downscale_method = FilterType::CatmullRom;
-                }
-                if ui.add(egui::SelectableLabel::new(
-                    self.downscale_method == FilterType::Lanczos3,
-                    "Lanczos3",
-                )).on_hover_text("Gives the best results but is very slow").clicked() {
-                    DOWNSCALE_METHOD.lock().unwrap().clone_from(&FilterType::Lanczos3);
-                    self.downscale_method = FilterType::Lanczos3;
-                }
+                downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent");
+                downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio");
+                downscale_label(ui, &mut self.downscale_method, FilterType::Gaussian, "Gaussian", "Fast but gives poor results");
+                downscale_label(ui, &mut self.downscale_method, FilterType::CatmullRom, "CatmullRom", "Good results but is slow, similar results to Lanczos3");
+                downscale_label(ui, &mut self.downscale_method, FilterType::Lanczos3, "Lanczos3", "Gives the best results but is very slow");
             });
             ui.separator();
 
@@ -283,9 +204,6 @@ impl eframe::App for MyApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        // Runs to set lighting back to normal
-        unsafe {
-            wooting::wooting_rgb_close();
-        }
+        wooting::exit_rgb();
     }
 }
