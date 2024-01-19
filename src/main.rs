@@ -19,21 +19,39 @@ static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
 static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
 static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
-static RGB_SIZE: Lazy<(u32, u32)> = Lazy::new(wooting::get_rgb_size);
+static RGB_SIZE: Lazy<Mutex<(u32, u32)>> = Lazy::new(|| {
+    let (width, height) = wooting::get_rgb_size();
+    Mutex::new((width, height))
+});
 
 fn main() -> Result<(), eframe::Error> {
     wooting::update_rgb();
 
     // Screen thread, captures the screen and stores it in the static SCREEN
     std::thread::spawn(|| loop {
+        let frame_rgb_size = *RGB_SIZE.lock().unwrap();
+
+        // Rescans for a device every second
+        if frame_rgb_size.0 == 0 || frame_rgb_size.1 == 0 {
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            RGB_SIZE
+                .lock()
+                .unwrap()
+                .clone_from(&wooting::get_rgb_size());
+            continue;
+        }
+
         let screens = Screen::all().unwrap();
         let capture = screens[*SCREEN_INDEX.lock().unwrap()].capture().unwrap();
 
         let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
             .unwrap();
         let img = image::DynamicImage::ImageRgba8(img);
-        let resized_capture =
-            img.resize_exact(RGB_SIZE.0, RGB_SIZE.1, *DOWNSCALE_METHOD.lock().unwrap());
+        let resized_capture = img.resize_exact(
+            frame_rgb_size.0,
+            frame_rgb_size.1,
+            *DOWNSCALE_METHOD.lock().unwrap(),
+        );
 
         SCREEN.lock().unwrap().clone_from(&resized_capture);
 
@@ -102,6 +120,7 @@ impl eframe::App for MyApp {
             self.init = false;
         }
 
+        let frame_rgb_size = *RGB_SIZE.lock().unwrap();
         let resized_capture = SCREEN.lock().unwrap().clone();
 
         if self.reduce_bright_effects {
@@ -165,9 +184,9 @@ impl eframe::App for MyApp {
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
                 if self.display_rgb_preview {
                     ui.heading("Preview Lighting");
-                    for y in 0..RGB_SIZE.1 {
+                    for y in 0..frame_rgb_size.1 {
                         ui.horizontal(|ui| {
-                            for x in 0..RGB_SIZE.0 {
+                            for x in 0..frame_rgb_size.0 {
                                 let color: egui::Color32 = {
                                     let image::Rgba([r, g, b, _]) = resized_capture.get_pixel(x, y);
 
@@ -184,14 +203,26 @@ impl eframe::App for MyApp {
                     ui.separator();
                 }
 
-                ui.heading("Device Info");
+                ui.horizontal(|ui| {
+                    ui.heading("Device Info");
+                    if ui.add(egui::Button::new("Refresh")).on_hover_text("Refreshes the device info").clicked() {
+                        self.toasts
+                            .info("Refreshing Device Info")
+                            .set_duration(Some(std::time::Duration::from_secs(1)));
+                        wooting::reconnect_device();
+                        self.init = true;
+                        self.device_name = wooting::get_device_name();
+                        self.device_creation = wooting::get_device_creation();
+                        RGB_SIZE.lock().unwrap().clone_from(&wooting::get_rgb_size());
+                    }
+                });
                 ui.add(egui::Label::new(format!("Name: {}", self.device_name,)));
                 ui.label(format!("Creation: {}", self.device_creation));
 
-                let lighting_dimensions = if RGB_SIZE.0 == 0 && RGB_SIZE.1 == 0 {
+                let lighting_dimensions = if frame_rgb_size.0 == 0 && frame_rgb_size.1 == 0 {
                     "Unknown".to_string()
                 } else {
-                    format!("{}x{}", RGB_SIZE.0, RGB_SIZE.1)
+                    format!("{}x{}", frame_rgb_size.0, frame_rgb_size.1)
                 };
                 ui.add(egui::Label::new(format!(
                     "Lighting Dimensions: {}",
