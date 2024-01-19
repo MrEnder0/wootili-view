@@ -57,16 +57,23 @@ pub fn get_device_creation() -> String {
     }
 }
 
-pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8) {
+pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8, red_shift_fix: bool) {
     unsafe {
         for (x, y, pixel) in resized_capture.pixels() {
             let image::Rgba([r, g, b, _]) = pixel;
+            let adjusted_r = if red_shift_fix {
+                r.saturating_sub(35)
+            } else {
+                r
+            };
+            let adjusted_g = if red_shift_fix { g + 10 } else { g };
+            let adjusted_b = if red_shift_fix { b + 10 } else { b };
             wooting::wooting_rgb_array_set_single(
                 y as u8 + 1,
                 x as u8,
-                (r as f32 * (brightness as f32 * 0.01)).round() as u8,
-                (g as f32 * (brightness as f32 * 0.01)).round() as u8,
-                (b as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (adjusted_r as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (adjusted_g as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (adjusted_b as f32 * (brightness as f32 * 0.01)).round() as u8,
             );
         }
 
@@ -79,7 +86,6 @@ pub fn exit_rgb() {
         wooting::wooting_rgb_close();
     }
 }
-
 
 pub fn update_rgb() {
     unsafe {

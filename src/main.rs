@@ -50,6 +50,8 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct MyApp {
+    toasts: Toasts,
+    init: bool,
     device_name: String,
     device_creation: String,
     brightness: u8,
@@ -59,13 +61,14 @@ struct MyApp {
     display_rgb_preview: bool,
     downscale_method: FilterType,
     frame_sleep: u64,
-    toasts: Toasts,
-    init: bool,
+    red_shift_fix: bool,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
         Self {
+            toasts: Toasts::default(),
+            init: true,
             device_name: wooting::get_device_name(),
             device_creation: wooting::get_device_creation(),
             brightness: 100,
@@ -75,8 +78,7 @@ impl Default for MyApp {
             display_rgb_preview: true,
             downscale_method: FilterType::Triangle,
             frame_sleep: 10,
-            toasts: Toasts::default(),
-            init: true,
+            red_shift_fix: false,
         }
     }
 }
@@ -116,7 +118,7 @@ impl eframe::App for MyApp {
             }
         }
 
-        wooting::draw_rgb(resized_capture.clone(), self.brightness);
+        wooting::draw_rgb(resized_capture.clone(), self.brightness, self.red_shift_fix);
 
         if self.current_frame_reduce {
             self.brightness += 50;
@@ -133,6 +135,7 @@ impl eframe::App for MyApp {
                 *SCREEN_INDEX.lock().unwrap() = self.screen;
             }
             ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright");
+            ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE");
             ui.menu_button("Downscale Method", |ui| {
                 downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent");
                 downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio");
