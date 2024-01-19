@@ -14,4 +14,4 @@ The functionality of this project is straightforward. The program captures scree
 
 ### Prerequisites
 
-No prerequisites are required to run this program, other than the rust toolchain for compiling the program.
+The Wooting Analog SDK is the only prerequisite required to run the program. For development, you will need a Rust toolchain to compile the program.
