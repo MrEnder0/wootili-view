@@ -31,22 +31,13 @@ fn main() -> Result<(), eframe::Error> {
     std::thread::spawn(|| loop {
         let frame_rgb_size = *RGB_SIZE.lock().unwrap();
 
-        // Rescans for a device every second
-        if frame_rgb_size.0 == 0 || frame_rgb_size.1 == 0 {
-            std::thread::sleep(std::time::Duration::from_millis(1000));
-            RGB_SIZE
-                .lock()
-                .unwrap()
-                .clone_from(&wooting::get_rgb_size());
-            continue;
-        }
-
         let screens = Screen::all().unwrap();
         let capture = screens[*SCREEN_INDEX.lock().unwrap()].capture().unwrap();
 
-        let img = image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-            .unwrap();
-        let img = image::DynamicImage::ImageRgba8(img);
+        let img = image::DynamicImage::ImageRgba8(
+            image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
+                .unwrap(),
+        );
         let resized_capture = img.resize_exact(
             frame_rgb_size.0,
             frame_rgb_size.1,
@@ -121,27 +112,39 @@ impl eframe::App for MyApp {
         }
 
         let frame_rgb_size = *RGB_SIZE.lock().unwrap();
-        let resized_capture = SCREEN.lock().unwrap().clone();
+        let mut resized_capture = image::DynamicImage::new_rgba8(1, 1);
 
-        if self.reduce_bright_effects {
-            let avg_screen =
-                resized_capture
-                    .clone()
-                    .resize(1, 1, image::imageops::FilterType::Gaussian);
+        if frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0 {
+            resized_capture = SCREEN.lock().unwrap().clone();
 
-            let image::Rgba([r, g, b, _]) = avg_screen.get_pixel(0, 0);
+            if self.reduce_bright_effects {
+                let avg_screen =
+                    resized_capture
+                        .clone()
+                        .resize(1, 1, image::imageops::FilterType::Gaussian);
 
-            if r > 220 || g > 220 || b > 220 {
-                self.current_frame_reduce = true;
-                self.brightness -= 50;
+                let image::Rgba([r, g, b, _]) = avg_screen.get_pixel(0, 0);
+
+                if r > 220 || g > 220 || b > 220 {
+                    self.current_frame_reduce = true;
+                    self.brightness -= 50;
+                }
             }
-        }
 
-        wooting::draw_rgb(resized_capture.clone(), self.brightness, self.red_shift_fix);
+            wooting::draw_rgb(resized_capture.clone(), self.brightness, self.red_shift_fix);
 
-        if self.current_frame_reduce {
-            self.brightness += 50;
-            self.current_frame_reduce = false;
+            if self.current_frame_reduce {
+                self.brightness += 50;
+                self.current_frame_reduce = false;
+            }
+        } else {
+            wooting::reconnect_device();
+            self.device_name = wooting::get_device_name();
+            self.device_creation = wooting::get_device_creation();
+            RGB_SIZE
+                .lock()
+                .unwrap()
+                .clone_from(&wooting::get_rgb_size());
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -182,7 +185,7 @@ impl eframe::App for MyApp {
             });
 
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
-                if self.display_rgb_preview {
+                if self.display_rgb_preview && frame_rgb_size == resized_capture.dimensions() {
                     ui.heading("Preview Lighting");
                     for y in 0..frame_rgb_size.1 {
                         ui.horizontal(|ui| {
@@ -205,7 +208,7 @@ impl eframe::App for MyApp {
 
                 ui.horizontal(|ui| {
                     ui.heading("Device Info");
-                    if ui.add(egui::Button::new("Refresh")).on_hover_text("Refreshes the device info").clicked() {
+                    if ui.add(egui::Button::new("Refresh")).on_hover_text("Refreshes the device info, devices should instantly be picked up automatically, but if you have multiple wooting devices plugged in or you want to force refresh you can with this.").clicked() {
                         self.toasts
                             .info("Refreshing Device Info")
                             .set_duration(Some(std::time::Duration::from_secs(1)));
