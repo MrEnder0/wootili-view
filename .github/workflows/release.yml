@@ -26,20 +26,20 @@ jobs:
 
       - name: Get latest release version
         id: get_latest_release
-        uses: octokit/request-action@v2.x
-        with:
-          route: GET /repos/${{ github.repository }}/releases/latest
+        run: |
+          $release = curl -sL https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest | ConvertFrom-Json
+          echo ::set-output name=tag_name::$(echo $release.tag_name)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binaries
-        if: ${{ steps.extract_version.outputs.version != steps.get_latest_release.outputs.data.tag_name }}
+        if: ${{ steps.extract_version.outputs.version != steps.get_latest_release.outputs.tag_name }}
         run: |
           rustup target add x86_64-pc-windows-gnu
           cargo build --release --target x86_64-pc-windows-gnu
 
       - name: Create release
-        if: ${{ steps.extract_version.outputs.version != steps.get_latest_release.outputs.data.tag_name }}
+        if: ${{ steps.extract_version.outputs.version != steps.get_latest_release.outputs.tag_name }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
