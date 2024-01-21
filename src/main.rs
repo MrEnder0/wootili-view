@@ -168,16 +168,16 @@ impl eframe::App for MyApp {
             if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before recapturing a new frame").changed() {
                 *FRAME_SLEEP.lock().unwrap() = self.frame_sleep;
             }
-            ui.horizontal(|ui| {
-                ui.checkbox(&mut self.display_rgb_preview, "Display RGB Preview").on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
-            });
+
+            let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
+            ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.hyperlink_to(format!(
                         "Wootili-View {} by Mr.Ender",
                         env!("CARGO_PKG_VERSION")
-                    ), "https://github.com/MrEnder0/Wootili-View");
+                    ), format!("https://github.com/MrEnder0/wootili-view/releases/tag/{}", env!("CARGO_PKG_VERSION")));
                 });
             });
 
