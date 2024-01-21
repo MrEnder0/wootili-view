@@ -27,6 +27,8 @@ jobs:
         uses: octokit/request-action@v2.x
         with:
           route: GET /repos/${{ github.repository }}/releases/latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binaries
         if: ${{ steps.extract_version.outputs.version != steps.get_latest_release.outputs.data.tag_name }}
