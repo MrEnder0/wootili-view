@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +20,9 @@ jobs:
 
       - name: Extract version from Cargo.toml
         id: extract_version
-        run: echo ::set-output name=version::$(grep -oP '^version\s*=\s*"\K[^"]+' Cargo.toml)
+        run: |
+          Get-Content Cargo.toml | Select-String -Pattern '^version\s*=\s*"([^"]+)"' | ForEach-Object { $_.Matches[0].Groups[1].Value } | Set-Content -Path version.txt
+          echo ::set-output name=version::$(Get-Content version.txt)
 
       - name: Get latest release version
         id: get_latest_release
@@ -35,7 +37,6 @@ jobs:
         run: |
           rustup target add x86_64-pc-windows-gnu
           cargo build --release --target x86_64-pc-windows-gnu
-          cargo build --release --target x86_64-unknown-linux-gnu
 
       - name: Create release
         if: ${{ steps.extract_version.outputs.version != steps.get_latest_release.outputs.data.tag_name }}
