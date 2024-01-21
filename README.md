@@ -12,6 +12,9 @@ The functionality of this project is straightforward. The program captures scree
 
 ## Getting Started
 
+> [!IMPORTANT]  
+> At this current time this project is only supported on Windows.
+
 ### Prerequisites
 
 The Wooting Analog SDK is the only prerequisite required to run the program. For development, you will need a Rust toolchain to compile the program.
