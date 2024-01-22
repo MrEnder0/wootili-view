@@ -9,7 +9,7 @@ use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use once_cell::sync::Lazy;
 use screenshots::Screen;
 use std::sync::Mutex;
-use ui::downscale_label;
+use ui::*;
 
 // Statics for screen thread
 static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
@@ -185,52 +185,9 @@ impl eframe::App for MyApp {
             });
 
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
-                if self.display_rgb_preview && frame_rgb_size == resized_capture.dimensions() {
-                    ui.heading("Preview Lighting");
-                    for y in 0..frame_rgb_size.1 {
-                        ui.horizontal(|ui| {
-                            for x in 0..frame_rgb_size.0 {
-                                let color: egui::Color32 = {
-                                    let image::Rgba([r, g, b, _]) = resized_capture.get_pixel(x, y);
-
-                                    egui::Color32::from_rgb(r, g, b)
-                                };
-
-                                let size = egui::Vec2::new(10.0, 10.0);
-                                let rect = ui.allocate_space(size);
-                                ui.painter().rect_filled(rect.1, 1.0, color);
-                            }
-                        });
-                    }
-
-                    ui.separator();
-                }
-
-                ui.horizontal(|ui| {
-                    ui.heading("Device Info");
-                    if ui.add(egui::Button::new("Refresh")).on_hover_text("Refreshes the device info, devices should instantly be picked up automatically, but if you have multiple wooting devices plugged in or you want to force refresh you can with this.").clicked() {
-                        self.toasts
-                            .info("Refreshing Device Info")
-                            .set_duration(Some(std::time::Duration::from_secs(1)));
-                        wooting::reconnect_device();
-                        self.init = true;
-                        self.device_name = wooting::get_device_name();
-                        self.device_creation = wooting::get_device_creation();
-                        RGB_SIZE.lock().unwrap().clone_from(&wooting::get_rgb_size());
-                    }
-                });
-                ui.add(egui::Label::new(format!("Name: {}", self.device_name,)));
-                ui.label(format!("Creation: {}", self.device_creation));
-
-                let lighting_dimensions = if frame_rgb_size.0 == 0 && frame_rgb_size.1 == 0 {
-                    "Unknown".to_string()
-                } else {
-                    format!("{}x{}", frame_rgb_size.0, frame_rgb_size.1)
-                };
-                ui.add(egui::Label::new(format!(
-                    "Lighting Dimensions: {}",
-                    lighting_dimensions
-                )));
+                rgb_preview(ui, frame_rgb_size, resized_capture);
+                display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init);
+                display_lighting_dimensions(ui, frame_rgb_size);
             });
         });
 
