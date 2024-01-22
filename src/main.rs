@@ -7,28 +7,25 @@ mod wooting;
 use eframe::egui;
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use once_cell::sync::Lazy;
+use lazy_static::lazy_static;
 use scorched::{logf, LogData, LogImportance};
 use screenshots::Screen;
 use std::sync::Mutex;
 use ui::*;
 
 // Statics for screen thread
-static SCREEN: Mutex<Lazy<DynamicImage>> = Mutex::new(Lazy::new(|| {
-    let img = image::ImageBuffer::new(1, 1);
-    image::DynamicImage::ImageRgba8(img)
-}));
+lazy_static! {
+    static ref SCREEN: Mutex<DynamicImage> = Mutex::new({
+        let img = image::ImageBuffer::new(1, 1);
+        image::DynamicImage::ImageRgba8(img)
+    });
+    static ref RGB_SIZE: Mutex<(u32, u32)> = Mutex::new({ wooting::get_rgb_size() });
+}
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
 static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
 static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
-static RGB_SIZE: Lazy<Mutex<(u32, u32)>> = Lazy::new(|| {
-    let (width, height) = wooting::get_rgb_size();
-    Mutex::new((width, height))
-});
 
 fn main() -> Result<(), eframe::Error> {
-    //Sets up logging
-    logging::build_path();
     scorched::set_logging_path(
         format!("{}/", logging::logging_path().as_path().display()).as_str(),
     );

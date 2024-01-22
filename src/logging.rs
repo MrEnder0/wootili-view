@@ -10,8 +10,3 @@ pub fn logging_path() -> PathBuf {
         None => std::env::current_dir().unwrap(),
     }
 }
-
-pub fn build_path() {
-    let path = logging_path();
-    std::fs::create_dir_all(path).unwrap();
-}

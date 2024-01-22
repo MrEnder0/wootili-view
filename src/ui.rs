@@ -1,6 +1,8 @@
 use eframe::egui::{self, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
+use lazy_static::lazy_static;
+use reqwest::header::{HeaderMap, USER_AGENT};
 
 use crate::{wooting, DOWNSCALE_METHOD, RGB_SIZE};
 
@@ -79,14 +81,50 @@ pub fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)
     )));
 }
 
+lazy_static! {
+    static ref LATEST_VER: String = {
+        let mut headers = HeaderMap::new();
+        headers.insert(USER_AGENT, "Wootili-View Version Check".parse().unwrap());
+
+        let client = reqwest::blocking::Client::builder()
+            .default_headers(headers)
+            .build()
+            .unwrap();
+
+        let response = client
+            .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
+            .send()
+            .unwrap();
+
+        let content = response.text().unwrap();
+
+        let json = serde_json::from_str::<serde_json::Value>(&content).unwrap();
+        let tag_name = json["tag_name"].as_str().unwrap();
+
+        tag_name.to_string()
+    };
+}
+
 pub fn version_footer(ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.hyperlink_to(
-            format!("Wootili-View {} by Mr.Ender", env!("CARGO_PKG_VERSION")),
+            format!("Wootili-View {}", env!("CARGO_PKG_VERSION")),
             format!(
                 "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
                 env!("CARGO_PKG_VERSION")
             ),
         );
+
+        if *LATEST_VER != env!("CARGO_PKG_VERSION") {
+            ui.separator();
+            ui.label(format!("New Version Available: {}", *LATEST_VER));
+            ui.hyperlink_to(
+                "Download",
+                format!(
+                    "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
+                    *LATEST_VER
+                ),
+            );
+        }
     });
 }
