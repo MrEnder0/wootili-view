@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod logging;
 mod ui;
 mod wooting;
 
@@ -7,6 +8,7 @@ use eframe::egui;
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use once_cell::sync::Lazy;
+use scorched::{logf, LogData, LogImportance};
 use screenshots::Screen;
 use std::sync::Mutex;
 use ui::*;
@@ -25,6 +27,12 @@ static RGB_SIZE: Lazy<Mutex<(u32, u32)>> = Lazy::new(|| {
 });
 
 fn main() -> Result<(), eframe::Error> {
+    //Sets up logging
+    logging::build_path();
+    scorched::set_logging_path(
+        format!("{}/", logging::logging_path().as_path().display()).as_str(),
+    );
+
     wooting::update_rgb();
 
     // Screen thread, captures the screen and stores it in the static SCREEN
@@ -95,6 +103,7 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.init {
+            logf!(Info, "Connected to device Name: {}", self.device_name);
             match self.device_name.as_str() {
                 "N/A" => {
                     self.toasts

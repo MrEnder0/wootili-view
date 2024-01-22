@@ -1,6 +1,7 @@
 use std::ffi::CStr;
 
 use image::GenericImageView;
+use scorched::{logf, LogData, LogImportance};
 use wooting_rgb_sys as wooting;
 
 pub fn get_rgb_size() -> (u32, u32) {
@@ -18,7 +19,11 @@ pub fn get_rgb_size() -> (u32, u32) {
             "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
             "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
             _ => {
-                println!("Unsupported keyboard model: {}", model.to_str().unwrap());
+                logf!(
+                    Error,
+                    "Unsupported keyboard model: {}",
+                    model.to_str().unwrap()
+                );
                 (0, 0)
             }
         }
@@ -50,6 +55,7 @@ pub fn get_device_creation() -> String {
         let week = buff[8];
 
         if year == 2000 && week == 0 {
+            logf!(Warning, "Failed to get device creation");
             "N/A".to_string()
         } else {
             format!("Week {} of {}", week, year)
@@ -85,6 +91,7 @@ pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8, red_shift_
 }
 
 pub fn reconnect_device() {
+    logf!(Info, "Reconnecting Device");
     unsafe {
         wooting::wooting_rgb_close();
         update_rgb();
@@ -92,6 +99,7 @@ pub fn reconnect_device() {
 }
 
 pub fn exit_rgb() {
+    logf!(Info, "Exiting RGB");
     unsafe {
         wooting::wooting_rgb_close();
     }
