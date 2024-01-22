@@ -185,12 +185,7 @@ impl eframe::App for MyApp {
             ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.hyperlink_to(format!(
-                        "Wootili-View {} by Mr.Ender",
-                        env!("CARGO_PKG_VERSION")
-                    ), format!("https://github.com/MrEnder0/wootili-view/releases/tag/{}", env!("CARGO_PKG_VERSION")));
-                });
+                version_footer(ui);
             });
 
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {

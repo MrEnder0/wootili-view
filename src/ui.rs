@@ -78,3 +78,15 @@ pub fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)
         lighting_dimensions
     )));
 }
+
+pub fn version_footer(ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+        ui.hyperlink_to(
+            format!("Wootili-View {} by Mr.Ender", env!("CARGO_PKG_VERSION")),
+            format!(
+                "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
+                env!("CARGO_PKG_VERSION")
+            ),
+        );
+    });
+}
