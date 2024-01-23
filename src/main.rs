@@ -1,9 +1,9 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-mod logging;
+mod config;
+mod paths;
 mod ui;
 mod wooting;
 
+use config::*;
 use eframe::egui;
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
@@ -19,16 +19,18 @@ lazy_static! {
         let img = image::ImageBuffer::new(1, 1);
         image::DynamicImage::ImageRgba8(img)
     });
-    static ref RGB_SIZE: Mutex<(u32, u32)> = Mutex::new({ wooting::get_rgb_size() });
+    static ref RGB_SIZE: Mutex<(u32, u32)> = Mutex::new(wooting::get_rgb_size());
 }
 static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
 static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
 static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
 
 fn main() -> Result<(), eframe::Error> {
-    scorched::set_logging_path(
-        format!("{}/", logging::logging_path().as_path().display()).as_str(),
-    );
+    scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
+
+    if !config_exists() {
+        gen_config();
+    }
 
     wooting::update_rgb();
 
@@ -100,6 +102,11 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.init {
+            if !cfg!(windows) {
+                self.toasts
+                    .error("This application is not supported on your operating system")
+                    .set_duration(Some(std::time::Duration::from_secs(120)));
+            }
             logf!(Info, "Connected to device Name: {}", self.device_name);
             match self.device_name.as_str() {
                 "N/A" => {
@@ -113,6 +120,17 @@ impl eframe::App for MyApp {
                         .set_duration(Some(std::time::Duration::from_secs(3)));
                 }
             };
+
+            let config = read_config();
+
+            self.brightness = config.brightness;
+            self.reduce_bright_effects = config.reduce_bright_effects;
+            self.screen = config.screen;
+            self.display_rgb_preview = config.display_rgb_preview;
+            self.downscale_method = downscale_index_to_filter(config.downscale_method_index);
+            self.frame_sleep = config.frame_sleep;
+            self.red_shift_fix = config.red_shift_fix;
+            SCREEN_INDEX.lock().unwrap().clone_from(&self.screen);
 
             self.init = false;
         }
@@ -158,12 +176,19 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Visual");
-            ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting");
+            if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() {
+                change_config_option(ConfigChange::Brightness(self.brightness));
+            }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
+                change_config_option(ConfigChange::Screen(self.screen));
                 *SCREEN_INDEX.lock().unwrap() = self.screen;
             }
-            ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright");
-            ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE");
+            if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
+                change_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects));
+            }
+            if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() {
+                change_config_option(ConfigChange::RedShiftFix(self.red_shift_fix));
+            }
             ui.menu_button("Downscale Method", |ui| {
                 downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent");
                 downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio");
@@ -175,18 +200,23 @@ impl eframe::App for MyApp {
 
             ui.heading("Performance");
             if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before recapturing a new frame").changed() {
+                change_config_option(ConfigChange::FrameSleep(self.frame_sleep));
                 *FRAME_SLEEP.lock().unwrap() = self.frame_sleep;
             }
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
-            ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance");
+            if ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance").changed() {
+                change_config_option(ConfigChange::DisplayRgbPreview(self.display_rgb_preview));
+            }
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
                 version_footer(ui);
             });
 
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
-                rgb_preview(ui, frame_rgb_size, resized_capture);
+                if self.display_rgb_preview {
+                    rgb_preview(ui, frame_rgb_size, resized_capture);
+                }
                 display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init);
                 display_lighting_dimensions(ui, frame_rgb_size);
             });

@@ -4,7 +4,7 @@ use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use reqwest::header::{HeaderMap, USER_AGENT};
 
-use crate::{wooting, DOWNSCALE_METHOD, RGB_SIZE};
+use crate::{change_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
 
 pub fn downscale_label(
     ui: &mut Ui,
@@ -18,6 +18,7 @@ pub fn downscale_label(
         .on_hover_text(hover_text)
         .clicked()
     {
+        change_config_option(ConfigChange::DownscaleMethod(new));
         DOWNSCALE_METHOD.lock().unwrap().clone_from(&new);
         *current = new;
     }
