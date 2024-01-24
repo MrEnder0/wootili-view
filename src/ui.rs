@@ -1,4 +1,4 @@
-use eframe::egui::{self, SelectableLabel, Ui};
+use eframe::egui::{self, Hyperlink, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
@@ -93,19 +93,19 @@ lazy_static! {
             .build()
             .unwrap();
 
-        
         let response = match client
             .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
-            .send() {
-                Ok(response) => response,
-                Err(_) => {
-                    log_this(LogData {
-                        importance: scorched::LogImportance::Warning,
-                        message: "Failed to get lastest version info".to_string(),
-                    });
-                    return env!("CARGO_PKG_VERSION").to_string()
-                }
-            };
+            .send()
+        {
+            Ok(response) => response,
+            Err(_) => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Warning,
+                    message: "Failed to get lastest version info".to_string(),
+                });
+                return "Unknown".to_string();
+            }
+        };
 
         let content = match response.text() {
             Ok(content) => content,
@@ -114,7 +114,7 @@ lazy_static! {
                     importance: scorched::LogImportance::Warning,
                     message: "Unable to read lastest version info".to_string(),
                 });
-                return env!("CARGO_PKG_VERSION").to_string()
+                return "Unknown".to_string();
             }
         };
 
@@ -125,7 +125,7 @@ lazy_static! {
                     importance: scorched::LogImportance::Warning,
                     message: "Unable to parse version data into json".to_string(),
                 });
-                return env!("CARGO_PKG_VERSION").to_string()
+                return "Unknown".to_string();
             }
         };
 
@@ -136,7 +136,7 @@ lazy_static! {
                     importance: scorched::LogImportance::Warning,
                     message: "Unable to get version info from json".to_string(),
                 });
-                return env!("CARGO_PKG_VERSION").to_string()
+                return "Unknown".to_string();
             }
         };
 
@@ -154,16 +154,20 @@ pub fn version_footer(ui: &mut egui::Ui) {
             ),
         );
 
-        if *LATEST_VER != env!("CARGO_PKG_VERSION") {
+        if *LATEST_VER == "Unknown" {
             ui.separator();
-            ui.label(format!("New Version Available: {}", *LATEST_VER));
-            ui.hyperlink_to(
-                "Download",
+            ui.label("Failed to check for updates").on_hover_text(
+                "Failed to check for updates, try checking your internet connection",
+            );
+        } else {
+            ui.separator();
+            ui.add(Hyperlink::from_label_and_url(
+                format!("Update Available: {}", *LATEST_VER),
                 format!(
                     "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
                     *LATEST_VER
                 ),
-            );
+            ));
         }
     });
 }

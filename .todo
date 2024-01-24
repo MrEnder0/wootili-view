@@ -1,2 +1,6 @@
 [x] Create a version checker
 [x] Create a config system that saves settings
+[ ] Setting to check for updates on startup & make update ui better
+[ ] Add a reset settings option
+[ ] Clean up ui and make it feel like a product and not a tech demo
+[ ] Dark and light mode with ctx.set_visuals(egui::Visuals::dark());
