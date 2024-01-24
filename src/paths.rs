@@ -1,5 +1,7 @@
 use std::{env::home_dir, path::PathBuf};
 
+use scorched::log_this;
+
 pub fn logging_path() -> PathBuf {
     match home_dir() {
         Some(path) => path
@@ -7,13 +9,25 @@ pub fn logging_path() -> PathBuf {
             .join("Local")
             .join("Wootili-View")
             .join("logs"),
-        None => std::env::current_dir().unwrap(),
+        None => {
+            log_this(scorched::LogData {
+                importance: scorched::LogImportance::Warning,
+                message: "Unable to get home directory, defaulting to current path".to_string(),
+            });
+            std::env::current_dir().unwrap().join("logs")
+        }
     }
 }
 
 pub fn config_path() -> PathBuf {
     match home_dir() {
         Some(path) => path.join("AppData").join("Local").join("Wootili-View"),
-        None => std::env::current_dir().unwrap(),
+        None => {
+            log_this(scorched::LogData {
+                importance: scorched::LogImportance::Warning,
+                message: "Unable to get home directory, defaulting to current path".to_string(),
+            });
+            std::env::current_dir().unwrap()
+        }
     }
 }

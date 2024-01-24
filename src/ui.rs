@@ -3,6 +3,7 @@ use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use reqwest::header::{HeaderMap, USER_AGENT};
+use scorched::{log_this, LogData};
 
 use crate::{change_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
 
@@ -92,15 +93,52 @@ lazy_static! {
             .build()
             .unwrap();
 
-        let response = client
+        
+        let response = match client
             .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
-            .send()
-            .unwrap();
+            .send() {
+                Ok(response) => response,
+                Err(_) => {
+                    log_this(LogData {
+                        importance: scorched::LogImportance::Warning,
+                        message: "Failed to get lastest version info".to_string(),
+                    });
+                    return env!("CARGO_PKG_VERSION").to_string()
+                }
+            };
 
-        let content = response.text().unwrap();
+        let content = match response.text() {
+            Ok(content) => content,
+            Err(_) => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Warning,
+                    message: "Unable to read lastest version info".to_string(),
+                });
+                return env!("CARGO_PKG_VERSION").to_string()
+            }
+        };
 
-        let json = serde_json::from_str::<serde_json::Value>(&content).unwrap();
-        let tag_name = json["tag_name"].as_str().unwrap();
+        let json = match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(json) => json,
+            Err(_) => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Warning,
+                    message: "Unable to parse version data into json".to_string(),
+                });
+                return env!("CARGO_PKG_VERSION").to_string()
+            }
+        };
+
+        let tag_name = match json["tag_name"].as_str() {
+            Some(tag_name) => tag_name,
+            None => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Warning,
+                    message: "Unable to get version info from json".to_string(),
+                });
+                return env!("CARGO_PKG_VERSION").to_string()
+            }
+        };
 
         tag_name.to_string()
     };

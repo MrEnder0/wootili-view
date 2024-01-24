@@ -60,7 +60,10 @@ pub fn gen_config() {
         .separate_tuple_members(true)
         .enumerate_arrays(true);
 
-    let config_str = to_string_pretty(&data, config).expect("Serialization failed");
+    let config_str = to_string_pretty(&data, config).log_expect(
+        LogImportance::Error,
+        "Unable to serialize default config",
+    );
     std::fs::write(crate::paths::config_path().join("config.ron"), config_str)
         .log_expect(LogImportance::Error, "Unable to write config file");
 
@@ -110,7 +113,10 @@ pub fn change_config_option(new: ConfigChange) {
         .separate_tuple_members(true)
         .enumerate_arrays(true);
 
-    let config_str = to_string_pretty(&data, config).expect("Serialization failed");
+    let config_str = to_string_pretty(&data, config).log_expect(
+        LogImportance::Error,
+        "Unable to serialize config",
+    );
     std::fs::write(crate::paths::config_path().join("config.ron"), config_str)
         .log_expect(LogImportance::Error, "Unable to write config file");
 }

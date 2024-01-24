@@ -231,6 +231,13 @@ impl eframe::App for MyApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        change_config_option(ConfigChange::Brightness(self.brightness));
+        change_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects));
+        change_config_option(ConfigChange::Screen(self.screen));
+        change_config_option(ConfigChange::DisplayRgbPreview(self.display_rgb_preview));
+        change_config_option(ConfigChange::DownscaleMethod(self.downscale_method));
+        change_config_option(ConfigChange::FrameSleep(self.frame_sleep));
+        change_config_option(ConfigChange::RedShiftFix(self.red_shift_fix));
         wooting::exit_rgb();
     }
 }
