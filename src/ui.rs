@@ -20,7 +20,7 @@ pub fn downscale_label(
         .clicked()
     {
         change_config_option(ConfigChange::DownscaleMethod(new));
-        DOWNSCALE_METHOD.lock().unwrap().clone_from(&new);
+        DOWNSCALE_METHOD.write().unwrap().clone_from(&new);
         *current = new;
     }
 }
@@ -64,7 +64,7 @@ pub fn display_device_info(
             *init = true;
             *device_name = wooting::get_device_name();
             *device_creation = wooting::get_device_creation();
-            RGB_SIZE.lock().unwrap().clone_from(&wooting::get_rgb_size());
+            RGB_SIZE.write().unwrap().clone_from(&wooting::get_rgb_size());
         }
     });
     ui.add(egui::Label::new(format!("Name: {}", device_name,)));
@@ -159,7 +159,7 @@ pub fn version_footer(ui: &mut egui::Ui) {
             ui.label("Failed to check for updates").on_hover_text(
                 "Failed to check for updates, try checking your internet connection",
             );
-        } else {
+        } else if *LATEST_VER != env!("CARGO_PKG_VERSION") {
             ui.separator();
             ui.add(Hyperlink::from_label_and_url(
                 format!("Update Available: {}", *LATEST_VER),

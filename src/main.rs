@@ -12,20 +12,20 @@ use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use scorched::{logf, LogData, LogImportance};
 use screenshots::Screen;
-use std::sync::Mutex;
+use std::sync::RwLock;
 use ui::*;
 
 // Statics for screen thread
 lazy_static! {
-    static ref SCREEN: Mutex<DynamicImage> = Mutex::new({
+    static ref SCREEN: RwLock<DynamicImage> = RwLock::new({
         let img = image::ImageBuffer::new(1, 1);
         image::DynamicImage::ImageRgba8(img)
     });
-    static ref RGB_SIZE: Mutex<(u32, u32)> = Mutex::new(wooting::get_rgb_size());
+    static ref RGB_SIZE: RwLock<(u32, u32)> = RwLock::new(wooting::get_rgb_size());
 }
-static SCREEN_INDEX: Mutex<usize> = Mutex::new(0);
-static DOWNSCALE_METHOD: Mutex<FilterType> = Mutex::new(FilterType::Triangle);
-static FRAME_SLEEP: Mutex<u64> = Mutex::new(10);
+static SCREEN_INDEX: RwLock<usize> = RwLock::new(0);
+static DOWNSCALE_METHOD: RwLock<FilterType> = RwLock::new(FilterType::Triangle);
+static FRAME_SLEEP: RwLock<u64> = RwLock::new(10);
 
 fn main() -> Result<(), eframe::Error> {
     scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
@@ -38,10 +38,10 @@ fn main() -> Result<(), eframe::Error> {
 
     // Screen thread, captures the screen and stores it in the static SCREEN
     std::thread::spawn(|| loop {
-        let frame_rgb_size = *RGB_SIZE.lock().unwrap();
+        let frame_rgb_size = *RGB_SIZE.read().unwrap();
 
         let screens = Screen::all().unwrap();
-        let capture = screens[*SCREEN_INDEX.lock().unwrap()].capture().unwrap();
+        let capture = screens[*SCREEN_INDEX.read().unwrap()].capture().unwrap();
 
         let img = image::DynamicImage::ImageRgba8(
             image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
@@ -50,13 +50,13 @@ fn main() -> Result<(), eframe::Error> {
         let resized_capture = img.resize_exact(
             frame_rgb_size.0,
             frame_rgb_size.1,
-            *DOWNSCALE_METHOD.lock().unwrap(),
+            *DOWNSCALE_METHOD.read().unwrap(),
         );
 
-        SCREEN.lock().unwrap().clone_from(&resized_capture);
+        SCREEN.write().unwrap().clone_from(&resized_capture);
 
         std::thread::sleep(std::time::Duration::from_millis(
-            *FRAME_SLEEP.lock().unwrap(),
+            *FRAME_SLEEP.read().unwrap(),
         ));
     });
 
@@ -132,16 +132,15 @@ impl eframe::App for MyApp {
             self.downscale_method = downscale_index_to_filter(config.downscale_method_index);
             self.frame_sleep = config.frame_sleep;
             self.red_shift_fix = config.red_shift_fix;
-            SCREEN_INDEX.lock().unwrap().clone_from(&self.screen);
 
             self.init = false;
         }
 
-        let frame_rgb_size = *RGB_SIZE.lock().unwrap();
+        let frame_rgb_size = *RGB_SIZE.read().unwrap();
         let mut resized_capture = image::DynamicImage::new_rgba8(1, 1);
 
         if frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0 {
-            resized_capture = SCREEN.lock().unwrap().clone();
+            resized_capture = SCREEN.read().unwrap().clone();
 
             if self.reduce_bright_effects {
                 let avg_screen =
@@ -168,7 +167,7 @@ impl eframe::App for MyApp {
             self.device_name = wooting::get_device_name();
             self.device_creation = wooting::get_device_creation();
             RGB_SIZE
-                .lock()
+                .write()
                 .unwrap()
                 .clone_from(&wooting::get_rgb_size());
         }
@@ -183,7 +182,7 @@ impl eframe::App for MyApp {
             }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 change_config_option(ConfigChange::Screen(self.screen));
-                *SCREEN_INDEX.lock().unwrap() = self.screen;
+                *SCREEN_INDEX.write().unwrap() = self.screen;
             }
             if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
                 change_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects));
@@ -203,7 +202,7 @@ impl eframe::App for MyApp {
             ui.heading("Performance");
             if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before recapturing a new frame").changed() {
                 change_config_option(ConfigChange::FrameSleep(self.frame_sleep));
-                *FRAME_SLEEP.lock().unwrap() = self.frame_sleep;
+                *FRAME_SLEEP.write().unwrap() = self.frame_sleep;
             }
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
