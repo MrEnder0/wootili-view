@@ -5,7 +5,7 @@ use reqwest::header::{HeaderMap, USER_AGENT};
 use scorched::{log_this, LogData};
 use std::sync::OnceLock;
 
-use crate::{change_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
+use crate::{save_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
 
 pub fn downscale_label(
     ui: &mut Ui,
@@ -19,7 +19,9 @@ pub fn downscale_label(
         .on_hover_text(hover_text)
         .clicked()
     {
-        change_config_option(ConfigChange::DownscaleMethod(new));
+        if save_config_option(ConfigChange::DownscaleMethod(new)).is_err() {
+            return;
+        }
         DOWNSCALE_METHOD.write().unwrap().clone_from(&new);
         *current = new;
     }
@@ -144,7 +146,7 @@ fn get_lastest_ver() -> String {
 
 static LATEST_VER: OnceLock<String> = OnceLock::new();
 
-pub fn version_footer(ui: &mut egui::Ui) {
+pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
     ui.horizontal(|ui| {
         ui.hyperlink_to(
             format!("Wootili-View {}", env!("CARGO_PKG_VERSION")),
@@ -153,6 +155,10 @@ pub fn version_footer(ui: &mut egui::Ui) {
                 env!("CARGO_PKG_VERSION")
             ),
         );
+
+        if !check_for_updates {
+            return;
+        }
 
         let latest_ver = LATEST_VER.get_or_init(get_lastest_ver);
 

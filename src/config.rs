@@ -18,11 +18,13 @@ pub struct Config {
     pub downscale_method_index: u8,
     pub frame_sleep: u64,
     pub red_shift_fix: bool,
+    pub dark_mode: bool,
+    pub check_updates: bool,
 }
 
-pub static CONFIG_VERSION: u8 = 1;
+pub static CONFIG_VERSION: u8 = 2;
 
-pub fn read_config() -> Config {
+pub fn read_config() -> Option<Config> {
     let config_file = File::open(crate::paths::config_path().join("config.ron"))
         .log_expect(LogImportance::Error, "Unable to open config file");
     let config: Config = match from_reader(config_file) {
@@ -36,11 +38,11 @@ pub fn read_config() -> Config {
                 ),
             });
 
-            std::process::exit(0);
+            return None;
         }
     };
 
-    config
+    Some(config)
 }
 
 pub fn gen_config() {
@@ -53,6 +55,8 @@ pub fn gen_config() {
         downscale_method_index: 1,
         frame_sleep: 10,
         red_shift_fix: false,
+        dark_mode: true,
+        check_updates: true,
     };
 
     let config = PrettyConfig::new()
@@ -89,10 +93,23 @@ pub enum ConfigChange {
     DownscaleMethod(FilterType),
     FrameSleep(u64),
     RedShiftFix(bool),
+    Darkmode(bool),
+    CheckUpdates(bool),
 }
 
-pub fn change_config_option(new: ConfigChange) {
-    let mut data = read_config();
+pub fn save_config_option(new: ConfigChange) -> Result<(), ()> {
+    let mut data = match read_config() {
+        Some(x) => x,
+        None => {
+            log_this(LogData {
+                importance: LogImportance::Error,
+                message: "Unable to read config file, resetting config".to_string(),
+            });
+            reset_config();
+
+            return Err(());
+        }
+    };
 
     match new {
         ConfigChange::Brightness(x) => data.brightness = x,
@@ -104,6 +121,8 @@ pub fn change_config_option(new: ConfigChange) {
         }
         ConfigChange::FrameSleep(x) => data.frame_sleep = x,
         ConfigChange::RedShiftFix(x) => data.red_shift_fix = x,
+        ConfigChange::Darkmode(x) => data.dark_mode = x,
+        ConfigChange::CheckUpdates(x) => data.check_updates = x,
     }
 
     let config = PrettyConfig::new()
@@ -115,6 +134,15 @@ pub fn change_config_option(new: ConfigChange) {
         .log_expect(LogImportance::Error, "Unable to serialize config");
     std::fs::write(crate::paths::config_path().join("config.ron"), config_str)
         .log_expect(LogImportance::Error, "Unable to write config file");
+
+    Ok(())
+}
+
+pub fn reset_config() {
+    std::fs::remove_file(crate::paths::config_path().join("config.ron"))
+        .log_expect(LogImportance::Error, "Unable to delete config file");
+
+    gen_config();
 }
 
 pub fn downscale_index_to_filter(index: u8) -> FilterType {
