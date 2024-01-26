@@ -21,8 +21,8 @@ lazy_static! {
         let img = image::ImageBuffer::new(1, 1);
         image::DynamicImage::ImageRgba8(img)
     });
-    static ref RGB_SIZE: RwLock<(u32, u32)> = RwLock::new(wooting::get_rgb_size());
 }
+static RGB_SIZE: RwLock<(u32, u32)> = RwLock::new((0, 0));
 static SCREEN_INDEX: RwLock<usize> = RwLock::new(0);
 static DOWNSCALE_METHOD: RwLock<FilterType> = RwLock::new(FilterType::Triangle);
 static FRAME_SLEEP: RwLock<u64> = RwLock::new(10);

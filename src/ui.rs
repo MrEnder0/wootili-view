@@ -1,9 +1,9 @@
 use eframe::egui::{self, Hyperlink, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use lazy_static::lazy_static;
 use reqwest::header::{HeaderMap, USER_AGENT};
 use scorched::{log_this, LogData};
+use std::sync::OnceLock;
 
 use crate::{change_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
 
@@ -83,66 +83,66 @@ pub fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)
     )));
 }
 
-lazy_static! {
-    static ref LATEST_VER: String = {
-        let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, "Wootili-View Version Check".parse().unwrap());
+fn get_lastest_ver() -> String {
+    let mut headers = HeaderMap::new();
+    headers.insert(USER_AGENT, "Wootili-View Version Check".parse().unwrap());
 
-        let client = reqwest::blocking::Client::builder()
-            .default_headers(headers)
-            .build()
-            .unwrap();
+    let client = reqwest::blocking::Client::builder()
+        .default_headers(headers)
+        .build()
+        .unwrap();
 
-        let response = match client
-            .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
-            .send()
-        {
-            Ok(response) => response,
-            Err(_) => {
-                log_this(LogData {
-                    importance: scorched::LogImportance::Warning,
-                    message: "Failed to get lastest version info".to_string(),
-                });
-                return "Unknown".to_string();
-            }
-        };
-
-        let content = match response.text() {
-            Ok(content) => content,
-            Err(_) => {
-                log_this(LogData {
-                    importance: scorched::LogImportance::Warning,
-                    message: "Unable to read lastest version info".to_string(),
-                });
-                return "Unknown".to_string();
-            }
-        };
-
-        let json = match serde_json::from_str::<serde_json::Value>(&content) {
-            Ok(json) => json,
-            Err(_) => {
-                log_this(LogData {
-                    importance: scorched::LogImportance::Warning,
-                    message: "Unable to parse version data into json".to_string(),
-                });
-                return "Unknown".to_string();
-            }
-        };
-
-        let tag_name = match json["tag_name"].as_str() {
-            Some(tag_name) => tag_name,
-            None => {
-                log_this(LogData {
-                    importance: scorched::LogImportance::Warning,
-                    message: "Unable to get version info from json".to_string(),
-                });
-                return "Unknown".to_string();
-            }
-        };
-
-        tag_name.to_string()
+    let response = match client
+        .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
+        .send()
+    {
+        Ok(response) => response,
+        Err(_) => {
+            log_this(LogData {
+                importance: scorched::LogImportance::Warning,
+                message: "Failed to get lastest version info".to_string(),
+            });
+            return "Unknown".to_string();
+        }
     };
+
+    let content = match response.text() {
+        Ok(content) => content,
+        Err(_) => {
+            log_this(LogData {
+                importance: scorched::LogImportance::Warning,
+                message: "Unable to read lastest version info".to_string(),
+            });
+            return "Unknown".to_string();
+        }
+    };
+
+    let json = match serde_json::from_str::<serde_json::Value>(&content) {
+        Ok(json) => json,
+        Err(_) => {
+            log_this(LogData {
+                importance: scorched::LogImportance::Warning,
+                message: "Unable to parse version data into json".to_string(),
+            });
+            return "Unknown".to_string();
+        }
+    };
+
+    let tag_name = match json["tag_name"].as_str() {
+        Some(tag_name) => tag_name,
+        None => {
+            log_this(LogData {
+                importance: scorched::LogImportance::Warning,
+                message: "Unable to get version info from json".to_string(),
+            });
+            return "Unknown".to_string();
+        }
+    };
+
+    tag_name.to_string()
 }
+
+static LATEST_VER: OnceLock<String> = OnceLock::new();
 
 pub fn version_footer(ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
@@ -154,18 +154,20 @@ pub fn version_footer(ui: &mut egui::Ui) {
             ),
         );
 
-        if *LATEST_VER == "Unknown" {
+        let latest_ver = LATEST_VER.get_or_init(get_lastest_ver);
+
+        if latest_ver == "Unknown" {
             ui.separator();
             ui.label("Failed to check for updates").on_hover_text(
                 "Failed to check for updates, try checking your internet connection",
             );
-        } else if *LATEST_VER != env!("CARGO_PKG_VERSION") {
+        } else if latest_ver != env!("CARGO_PKG_VERSION") {
             ui.separator();
             ui.add(Hyperlink::from_label_and_url(
-                format!("Update Available: {}", *LATEST_VER),
+                format!("Update Available: {}", latest_ver),
                 format!(
                     "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
-                    *LATEST_VER
+                    latest_ver
                 ),
             ));
         }

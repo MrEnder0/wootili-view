@@ -55,7 +55,7 @@ pub fn get_device_creation() -> String {
         let week = buff[8];
 
         if year == 2000 && week == 0 {
-            logf!(Warning, "Failed to get device creation");
+            logf!(Warning, "Failed to get device creation date");
             "N/A".to_string()
         } else {
             format!("Week {} of {}", week, year)
@@ -72,17 +72,12 @@ pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8, red_shift_
             } else {
                 r
             };
-            let adjusted_b = if red_shift_fix {
-                b.saturating_add(5)
-            } else {
-                b
-            };
             wooting::wooting_rgb_array_set_single(
                 y as u8 + 1,
                 x as u8,
                 (adjusted_r as f32 * (brightness as f32 * 0.01)).round() as u8,
                 (g as f32 * (brightness as f32 * 0.01)).round() as u8,
-                (adjusted_b as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (b as f32 * (brightness as f32 * 0.01)).round() as u8,
             );
         }
 
