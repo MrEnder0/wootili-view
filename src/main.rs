@@ -78,7 +78,7 @@ struct MyApp {
     screen: usize,
     display_rgb_preview: bool,
     downscale_method: FilterType,
-    frame_sleep: u64,
+    frame_sleep: (u8, u8),
     red_shift_fix: bool,
     dark_mode: bool,
     check_updates: bool,
@@ -97,7 +97,7 @@ impl Default for MyApp {
             screen: 0,
             display_rgb_preview: true,
             downscale_method: FilterType::Triangle,
-            frame_sleep: 10,
+            frame_sleep: (15, 10), // (UI, Capture)
             red_shift_fix: false,
             dark_mode: true,
             check_updates: true,
@@ -130,9 +130,6 @@ impl eframe::App for MyApp {
             let config = match read_config() {
                 Some(config) => config,
                 None => {
-                    self.toasts
-                        .error("Unable to read config file")
-                        .set_duration(Some(std::time::Duration::from_secs(5)));
                     reset_config();
 
                     self.toasts
@@ -226,27 +223,18 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Performance");
-            if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before recapturing a new frame").changed() {
+            if ui.add(egui::Slider::new(&mut self.frame_sleep.0, 0..=100).text("UI Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before updating the ui").changed() {
                 save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
-                *FRAME_SLEEP.write().unwrap() = self.frame_sleep;
+            }
+            if ui.add(egui::Slider::new(&mut self.frame_sleep.1, 0..=100).text("Capture Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before capturing the screen").changed() {
+                save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
+                *FRAME_SLEEP.write().unwrap() = self.frame_sleep.1.into();
             }
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
             if ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance").changed() {
                 save_config_option(ConfigChange::DisplayRgbPreview(self.display_rgb_preview), &mut self.toasts);
             }
-
-            egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
-                version_footer(ui, self.check_updates);
-            });
-
-            egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
-                if self.display_rgb_preview {
-                    rgb_preview(ui, frame_rgb_size, resized_capture);
-                }
-                display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init);
-                display_lighting_dimensions(ui, frame_rgb_size);
-            });
             ui.separator();
 
             ui.heading("Application");
@@ -286,11 +274,25 @@ impl eframe::App for MyApp {
                     ctx.set_visuals(egui::Visuals::light());
                 }
             }
+
+            egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
+                version_footer(ui, self.check_updates);
+            });
+
+            egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
+                if self.display_rgb_preview {
+                    rgb_preview(ui, frame_rgb_size, resized_capture);
+                }
+                display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init);
+                display_lighting_dimensions(ui, frame_rgb_size);
+            });
         });
 
         self.toasts.show(ctx);
 
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(
+            self.frame_sleep.0.into(),
+        ));
         ctx.request_repaint()
     }
 
