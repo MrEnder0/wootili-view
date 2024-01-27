@@ -203,53 +203,37 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Visual");
-            if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() && save_config_option(ConfigChange::Brightness(self.brightness)).is_err() {
-                self.toasts
-            .warning("Config file has been reset due to a config format error")
-            .set_duration(Some(std::time::Duration::from_secs(5)));
+            if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() {
+                save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
             }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
-                if save_config_option(ConfigChange::Screen(self.screen)).is_err() {
-                    self.toasts
-                        .warning("Config file has been reset due to a config format error")
-                        .set_duration(Some(std::time::Duration::from_secs(5)));
-                }
+                save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
                 *SCREEN_INDEX.write().unwrap() = self.screen;
             }
-            if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() && save_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects)).is_err() {
-                self.toasts
-                    .warning("Config file has been reset due to a config format error")
-                    .set_duration(Some(std::time::Duration::from_secs(5)));
+            if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
+                save_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects), &mut self.toasts);
             }
-            if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() && save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix)).is_err() {
-                self.toasts
-                    .warning("Config file has been reset due to a config format error")
-                    .set_duration(Some(std::time::Duration::from_secs(5)));
+            if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() {
+                save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix), &mut self.toasts);
             }
             ui.menu_button("Downscale Method", |ui| {
-                downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent");
-                downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio");
-                downscale_label(ui, &mut self.downscale_method, FilterType::Gaussian, "Gaussian", "Fast but gives poor results");
-                downscale_label(ui, &mut self.downscale_method, FilterType::CatmullRom, "CatmullRom", "Good results but is slow, similar results to Lanczos3");
-                downscale_label(ui, &mut self.downscale_method, FilterType::Lanczos3, "Lanczos3", "Gives the best results but is very slow");
+                downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent", &mut self.toasts);
+                downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio", &mut self.toasts);
+                downscale_label(ui, &mut self.downscale_method, FilterType::Gaussian, "Gaussian", "Fast but gives poor results", &mut self.toasts);
+                downscale_label(ui, &mut self.downscale_method, FilterType::CatmullRom, "CatmullRom", "Good results but is slow, similar results to Lanczos3", &mut self.toasts);
+                downscale_label(ui, &mut self.downscale_method, FilterType::Lanczos3, "Lanczos3", "Gives the best results but is very slow", &mut self.toasts);
             });
             ui.separator();
 
             ui.heading("Performance");
             if ui.add(egui::Slider::new(&mut self.frame_sleep, 0..=100).text("Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before recapturing a new frame").changed() {
-                if save_config_option(ConfigChange::FrameSleep(self.frame_sleep)).is_err() {
-                    self.toasts
-                        .warning("Config file has been reset due to a config format error")
-                        .set_duration(Some(std::time::Duration::from_secs(5)));
-                }
+                save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
                 *FRAME_SLEEP.write().unwrap() = self.frame_sleep;
             }
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
-            if ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance").changed() && save_config_option(ConfigChange::DisplayRgbPreview(self.display_rgb_preview)).is_err() {
-                self.toasts
-                    .warning("Config file has been reset due to a config format error")
-                    .set_duration(Some(std::time::Duration::from_secs(5)));
+            if ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance").changed() {
+                save_config_option(ConfigChange::DisplayRgbPreview(self.display_rgb_preview), &mut self.toasts);
             }
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
@@ -267,11 +251,7 @@ impl eframe::App for MyApp {
 
             ui.heading("Application");
             if ui.checkbox(&mut self.dark_mode, "Darkmode").on_hover_text("Enables darkmode").changed() {
-                if save_config_option(ConfigChange::Darkmode(self.dark_mode)).is_err() {
-                    self.toasts
-                        .warning("Config file has been reset due to a config format error")
-                        .set_duration(Some(std::time::Duration::from_secs(5)));
-                }
+                save_config_option(ConfigChange::Darkmode(self.dark_mode), &mut self.toasts);
 
                 if self.dark_mode {
                     ctx.set_visuals(egui::Visuals::dark());
@@ -279,10 +259,8 @@ impl eframe::App for MyApp {
                     ctx.set_visuals(egui::Visuals::light());
                 }
             }
-            if ui.checkbox(&mut self.check_updates, "Check for Updates").on_hover_text("Checks for updates on startup, wont apply to current session").changed() && save_config_option(ConfigChange::CheckUpdates(self.check_updates)).is_err() {
-                self.toasts
-                    .warning("Config file has been reset due to a config format error")
-                    .set_duration(Some(std::time::Duration::from_secs(5)));
+            if ui.checkbox(&mut self.check_updates, "Check for Updates").on_hover_text("Checks for updates on startup, wont apply to current session").changed() {
+                save_config_option(ConfigChange::CheckUpdates(self.check_updates), &mut self.toasts);
             }
             if ui.button("Reset Config").on_hover_text("Resets the config to the default values").clicked() {
                 reset_config();
@@ -317,55 +295,30 @@ impl eframe::App for MyApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        if save_config_option(ConfigChange::Brightness(self.brightness)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::ReduceBrightEffects(
-            self.reduce_bright_effects,
-        ))
-        .is_err()
-        {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::Screen(self.screen)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::DisplayRgbPreview(self.display_rgb_preview)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::DownscaleMethod(self.downscale_method)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::FrameSleep(self.frame_sleep)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::Darkmode(self.dark_mode)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
-        if save_config_option(ConfigChange::CheckUpdates(self.check_updates)).is_err() {
-            self.toasts
-                .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
-        }
+        save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
+        save_config_option(
+            ConfigChange::ReduceBrightEffects(self.reduce_bright_effects),
+            &mut self.toasts,
+        );
+        save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
+        save_config_option(
+            ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
+            &mut self.toasts,
+        );
+        save_config_option(
+            ConfigChange::DownscaleMethod(self.downscale_method),
+            &mut self.toasts,
+        );
+        save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
+        save_config_option(
+            ConfigChange::RedShiftFix(self.red_shift_fix),
+            &mut self.toasts,
+        );
+        save_config_option(ConfigChange::Darkmode(self.dark_mode), &mut self.toasts);
+        save_config_option(
+            ConfigChange::CheckUpdates(self.check_updates),
+            &mut self.toasts,
+        );
         wooting::exit_rgb();
     }
 }

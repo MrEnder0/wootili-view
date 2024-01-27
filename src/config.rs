@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use egui_notify::Toasts;
 use image::imageops::FilterType;
 use ron::{
     de::from_reader,
@@ -97,7 +98,7 @@ pub enum ConfigChange {
     CheckUpdates(bool),
 }
 
-pub fn save_config_option(new: ConfigChange) -> Result<(), ()> {
+pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
     let mut data = match read_config() {
         Some(x) => x,
         None => {
@@ -107,7 +108,11 @@ pub fn save_config_option(new: ConfigChange) -> Result<(), ()> {
             });
             reset_config();
 
-            return Err(());
+            toasts
+                .warning("Config file has been reset due to a config format error")
+                .set_duration(Some(std::time::Duration::from_secs(5)));
+
+            read_config().unwrap()
         }
     };
 
@@ -134,8 +139,6 @@ pub fn save_config_option(new: ConfigChange) -> Result<(), ()> {
         .log_expect(LogImportance::Error, "Unable to serialize config");
     std::fs::write(crate::paths::config_path().join("config.ron"), config_str)
         .log_expect(LogImportance::Error, "Unable to write config file");
-
-    Ok(())
 }
 
 pub fn reset_config() {

@@ -13,15 +13,14 @@ pub fn downscale_label(
     new: FilterType,
     label: &str,
     hover_text: &str,
+    toasts: &mut Toasts,
 ) {
     if ui
         .add(SelectableLabel::new(*current == new, label))
         .on_hover_text(hover_text)
         .clicked()
     {
-        if save_config_option(ConfigChange::DownscaleMethod(new)).is_err() {
-            return;
-        }
+        save_config_option(ConfigChange::DownscaleMethod(new), toasts);
         DOWNSCALE_METHOD.write().unwrap().clone_from(&new);
         *current = new;
     }
