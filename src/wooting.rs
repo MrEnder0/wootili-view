@@ -5,27 +5,17 @@ use scorched::{logf, LogData, LogImportance};
 use wooting_rgb_sys as wooting;
 
 pub fn get_rgb_size() -> (u32, u32) {
-    unsafe {
-        wooting::wooting_usb_disconnect(false);
-        wooting::wooting_usb_find_keyboard();
+    let model_name = get_device_name();
 
-        let wooting_usb_meta = *wooting::wooting_usb_get_meta();
-        let model = CStr::from_ptr(wooting_usb_meta.model);
-
-        match model.to_str().unwrap() {
-            //TODO: Verify these sizes for the one two and uwu
-            "Wooting One" => (17, 6),
-            "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => (21, 6),
-            "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
-            "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
-            _ => {
-                logf!(
-                    Error,
-                    "Unsupported keyboard model: {}",
-                    model.to_str().unwrap()
-                );
-                (0, 0)
-            }
+    match model_name.as_str() {
+        //TODO: Verify these sizes for the one two and uwu
+        "Wooting One" => (17, 6),
+        "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => (21, 6),
+        "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
+        "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
+        _ => {
+            logf!(Error, "Unsupported device model: {}", model_name);
+            (0, 0)
         }
     }
 }
@@ -72,12 +62,17 @@ pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8, red_shift_
             } else {
                 r
             };
+            let adjusted_b = if red_shift_fix {
+                b.saturating_sub(10)
+            } else {
+                b
+            };
             wooting::wooting_rgb_array_set_single(
                 y as u8 + 1,
                 x as u8,
                 (adjusted_r as f32 * (brightness as f32 * 0.01)).round() as u8,
                 (g as f32 * (brightness as f32 * 0.01)).round() as u8,
-                (b as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (adjusted_b as f32 * (brightness as f32 * 0.01)).round() as u8,
             );
         }
 
@@ -86,15 +81,13 @@ pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8, red_shift_
 }
 
 pub fn reconnect_device() {
-    logf!(Info, "Reconnecting Device");
-    unsafe {
-        wooting::wooting_rgb_close();
-        update_rgb();
-    }
+    exit_rgb();
+    logf!(Info, "Reconnecting RGB Device");
+    update_rgb();
 }
 
 pub fn exit_rgb() {
-    logf!(Info, "Exiting RGB");
+    logf!(Info, "Exiting RGB Device");
     unsafe {
         wooting::wooting_rgb_close();
     }
