@@ -1,6 +1,6 @@
 use std::{env::home_dir, path::PathBuf};
 
-use scorched::log_this;
+use scorched::{log_this, LogExpect, LogImportance, LogData};
 
 pub fn logging_path() -> PathBuf {
     match home_dir() {
@@ -10,11 +10,14 @@ pub fn logging_path() -> PathBuf {
             .join("Wootili-View")
             .join("logs"),
         None => {
-            log_this(scorched::LogData {
-                importance: scorched::LogImportance::Warning,
+            log_this(LogData {
+                importance: LogImportance::Warning,
                 message: "Unable to get home directory, defaulting to current path".to_string(),
             });
-            std::env::current_dir().unwrap().join("logs")
+            std::env::current_dir().log_expect(
+                LogImportance::Error,
+                "Unable to get current directory",
+            ).join("logs")
         }
     }
 }
@@ -23,11 +26,14 @@ pub fn config_path() -> PathBuf {
     match home_dir() {
         Some(path) => path.join("AppData").join("Local").join("Wootili-View"),
         None => {
-            log_this(scorched::LogData {
-                importance: scorched::LogImportance::Warning,
+            log_this(LogData {
+                importance: LogImportance::Warning,
                 message: "Unable to get home directory, defaulting to current path".to_string(),
             });
-            std::env::current_dir().unwrap()
+            std::env::current_dir().log_expect(
+                LogImportance::Error,
+                "Unable to get current directory",
+            )
         }
     }
 }

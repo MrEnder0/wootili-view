@@ -10,7 +10,7 @@ use eframe::egui;
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
-use scorched::{logf, LogData, LogImportance};
+use scorched::{logf, LogData, LogExpect, LogImportance};
 use screenshots::Screen;
 use std::sync::RwLock;
 use ui::*;
@@ -45,7 +45,7 @@ fn main() -> Result<(), eframe::Error> {
 
         let img = image::DynamicImage::ImageRgba8(
             image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-                .unwrap(),
+                .log_expect(LogImportance::Error, "Failed to convert capture to image buffer"),
         );
         let resized_capture = img.resize_exact(
             frame_rgb_size.0,
@@ -194,10 +194,14 @@ impl eframe::App for MyApp {
             wooting::reconnect_device();
             self.device_name = wooting::get_device_name();
             self.device_creation = wooting::get_device_creation();
+
             RGB_SIZE
                 .write()
                 .unwrap()
-                .clone_from(&wooting::get_rgb_size());
+                .clone_from(&wooting::get_rgb_size().log_expect(
+                    scorched::LogImportance::Error,
+                    "Failed to get rgb size",
+                ));
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {

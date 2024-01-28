@@ -81,7 +81,7 @@ pub fn config_exists() -> bool {
         crate::paths::config_path()
             .join("config.ron")
             .to_str()
-            .unwrap(),
+            .log_expect(LogImportance::Error, "Failed to convert config path to str"),
     )
     .exists()
 }
@@ -112,7 +112,10 @@ pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
                 .warning("Config file has been reset due to a config format error")
                 .set_duration(Some(std::time::Duration::from_secs(5)));
 
-            read_config().unwrap()
+            read_config().log_expect(
+                LogImportance::Error,
+                "Unable to read config file after reset",
+            )
         }
     };
 

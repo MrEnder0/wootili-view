@@ -2,7 +2,7 @@ use eframe::egui::{self, Hyperlink, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use reqwest::header::{HeaderMap, USER_AGENT};
-use scorched::{log_this, LogData};
+use scorched::{log_this, LogData, LogExpect};
 use std::sync::OnceLock;
 
 use crate::{save_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
@@ -65,7 +65,7 @@ pub fn display_device_info(
             *init = true;
             *device_name = wooting::get_device_name();
             *device_creation = wooting::get_device_creation();
-            RGB_SIZE.write().unwrap().clone_from(&wooting::get_rgb_size());
+            RGB_SIZE.write().unwrap().clone_from(&wooting::get_rgb_size().log_expect(scorched::LogImportance::Error, "Failed to get rgb size"));
         }
     });
     ui.add(egui::Label::new(format!("Name: {}", device_name,)));

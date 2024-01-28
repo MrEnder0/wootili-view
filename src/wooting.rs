@@ -1,21 +1,21 @@
 use std::ffi::CStr;
 
 use image::GenericImageView;
-use scorched::{logf, LogData, LogImportance};
+use scorched::{logf, LogData, LogExpect, LogImportance};
 use wooting_rgb_sys as wooting;
 
-pub fn get_rgb_size() -> (u32, u32) {
+pub fn get_rgb_size() -> Option<(u32, u32)> {
     let model_name = get_device_name();
 
     match model_name.as_str() {
         //TODO: Verify these sizes for the one two and uwu
-        "Wooting One" => (17, 6),
-        "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => (21, 6),
-        "Wooting 60HE" | "Wooting 60HE (ARM)" => (14, 5),
-        "Wooting UwU" | "Wooting UwU RGB" => (3, 1),
+        "Wooting One" => Some((17, 6)),
+        "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => Some((17, 6)),
+        "Wooting 60HE" | "Wooting 60HE (ARM)" => Some((14, 5)),
+        "Wooting UwU" | "Wooting UwU RGB" => Some((3, 1)),
         _ => {
             logf!(Error, "Unsupported device model: {}", model_name);
-            (0, 0)
+            None
         }
     }
 }
@@ -28,7 +28,7 @@ pub fn get_device_name() -> String {
         let wooting_usb_meta = *wooting::wooting_usb_get_meta();
         let model = CStr::from_ptr(wooting_usb_meta.model);
 
-        model.to_str().unwrap().to_string()
+        model.to_str().log_expect(LogImportance::Error, "Failed to convert device name to str").to_string()
     }
 }
 
