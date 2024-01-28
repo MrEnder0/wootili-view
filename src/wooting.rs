@@ -53,10 +53,27 @@ pub fn get_device_creation() -> String {
     }
 }
 
-pub fn draw_rgb(resized_capture: image::DynamicImage, brightness: u8, red_shift_fix: bool) {
+pub fn draw_rgb(
+    resized_capture: image::DynamicImage,
+    brightness: u8,
+    red_shift_fix: bool,
+    model_name: String,
+) {
     unsafe {
         for (x, y, pixel) in resized_capture.pixels() {
             let image::Rgba([r, g, b, _]) = pixel;
+            // On 60HE models, the spacebar area is skipped for redshift fix due to the rgb lights not being covered by the keyswitches
+            if model_name == "Wooting 60HE"
+                || model_name == "Wooting 60HE (ARM)" && y == 4 && x > 3 && x < 10
+            {
+                wooting::wooting_rgb_array_set_single(
+                    y as u8 + 1,
+                    x as u8,
+                    (r as f32 * (brightness as f32 * 0.01)).round() as u8,
+                    (g as f32 * (brightness as f32 * 0.01)).round() as u8,
+                    (b as f32 * (brightness as f32 * 0.01)).round() as u8,
+                );
+            }
             let adjusted_r = if red_shift_fix {
                 r.saturating_sub(40)
             } else {

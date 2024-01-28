@@ -179,7 +179,12 @@ impl eframe::App for MyApp {
                 }
             }
 
-            wooting::draw_rgb(resized_capture.clone(), self.brightness, self.red_shift_fix);
+            wooting::draw_rgb(
+                resized_capture.clone(),
+                self.brightness,
+                self.red_shift_fix,
+                self.device_name.clone(),
+            );
 
             if self.current_frame_reduce {
                 self.brightness += 50;
@@ -290,9 +295,7 @@ impl eframe::App for MyApp {
 
         self.toasts.show(ctx);
 
-        std::thread::sleep(std::time::Duration::from_millis(
-            self.frame_sleep.0.into(),
-        ));
+        std::thread::sleep(std::time::Duration::from_millis(self.frame_sleep.0.into()));
         ctx.request_repaint()
     }
 
