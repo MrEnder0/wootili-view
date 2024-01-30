@@ -17,7 +17,7 @@ pub struct Config {
     pub screen: usize,
     pub display_rgb_preview: bool,
     pub downscale_method_index: u8,
-    pub frame_sleep: (u8, u8),
+    pub frame_limit: (u8, u8),
     pub red_shift_fix: bool,
     pub dark_mode: bool,
     pub check_updates: bool,
@@ -66,7 +66,7 @@ pub fn gen_config() {
         screen: 0,
         display_rgb_preview: true,
         downscale_method_index: 1,
-        frame_sleep: (15, 10), // (UI, Capture)
+        frame_limit: (60, 15), // (UI, Capture)
         red_shift_fix: false,
         dark_mode: true,
         check_updates: true,
@@ -105,7 +105,7 @@ pub enum ConfigChange {
     Screen(usize),
     DisplayRgbPreview(bool),
     DownscaleMethod(FilterType),
-    FrameSleep((u8, u8)),
+    FrameLimit((u8, u8)),
     RedShiftFix(bool),
     Darkmode(bool),
     CheckUpdates(bool),
@@ -145,7 +145,7 @@ pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
         ConfigChange::DownscaleMethod(x) => {
             data.downscale_method_index = filter_to_downscale_index(x)
         }
-        ConfigChange::FrameSleep(x) => data.frame_sleep = x,
+        ConfigChange::FrameLimit(x) => data.frame_limit = x,
         ConfigChange::RedShiftFix(x) => data.red_shift_fix = x,
         ConfigChange::Darkmode(x) => data.dark_mode = x,
         ConfigChange::CheckUpdates(x) => data.check_updates = x,

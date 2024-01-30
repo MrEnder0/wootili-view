@@ -12,7 +12,7 @@ use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use scorched::{logf, LogData, LogExpect, LogImportance};
 use screenshots::Screen;
-use std::sync::RwLock;
+use std::{sync::RwLock, time::Duration};
 use ui::*;
 
 // Statics for screen thread
@@ -25,7 +25,7 @@ lazy_static! {
 static RGB_SIZE: RwLock<(u32, u32)> = RwLock::new((0, 0));
 static SCREEN_INDEX: RwLock<usize> = RwLock::new(0);
 static DOWNSCALE_METHOD: RwLock<FilterType> = RwLock::new(FilterType::Triangle);
-static FRAME_SLEEP: RwLock<u64> = RwLock::new(10);
+static CAPTURE_FRAME_LIMIT: RwLock<u64> = RwLock::new(10);
 
 fn main() -> Result<(), eframe::Error> {
     scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
@@ -56,7 +56,7 @@ fn main() -> Result<(), eframe::Error> {
         SCREEN.write().unwrap().clone_from(&resized_capture);
 
         std::thread::sleep(std::time::Duration::from_millis(
-            *FRAME_SLEEP.read().unwrap(),
+            *CAPTURE_FRAME_LIMIT.read().unwrap(),
         ));
     });
 
@@ -78,10 +78,11 @@ struct MyApp {
     screen: usize,
     display_rgb_preview: bool,
     downscale_method: FilterType,
-    frame_sleep: (u8, u8),
+    frame_limit: (u8, u8),
     red_shift_fix: bool,
     dark_mode: bool,
     check_updates: bool,
+    next_frame: std::time::Duration,
 }
 
 impl Default for MyApp {
@@ -97,10 +98,11 @@ impl Default for MyApp {
             screen: 0,
             display_rgb_preview: true,
             downscale_method: FilterType::Triangle,
-            frame_sleep: (15, 10), // (UI, Capture)
+            frame_limit: (60, 15), // (UI, Capture)
             red_shift_fix: false,
             dark_mode: true,
             check_updates: true,
+            next_frame: Duration::from_secs(0),
         }
     }
 }
@@ -145,7 +147,7 @@ impl eframe::App for MyApp {
             self.screen = config.screen;
             self.display_rgb_preview = config.display_rgb_preview;
             self.downscale_method = downscale_index_to_filter(config.downscale_method_index);
-            self.frame_sleep = config.frame_sleep;
+            self.frame_limit = config.frame_limit;
             self.red_shift_fix = config.red_shift_fix;
             self.dark_mode = config.dark_mode;
             self.check_updates = config.check_updates;
@@ -232,12 +234,12 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Performance");
-            if ui.add(egui::Slider::new(&mut self.frame_sleep.0, 0..=100).text("UI Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before updating the ui").changed() {
-                save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
+            if ui.add(egui::Slider::new(&mut self.frame_limit.0, 30..=120).text("UI FPS cap")).on_hover_text("Limits the FPS of the UI").changed() {
+                save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
             }
-            if ui.add(egui::Slider::new(&mut self.frame_sleep.1, 0..=100).text("Capture Frame Sleep (ms)")).on_hover_text("Waits the specified amount of time before capturing the screen").changed() {
-                save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
-                *FRAME_SLEEP.write().unwrap() = self.frame_sleep.1.into();
+            if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device").changed() {
+                save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
+                *CAPTURE_FRAME_LIMIT.write().unwrap() = self.frame_limit.1.into();
             }
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
@@ -272,7 +274,7 @@ impl eframe::App for MyApp {
                 self.screen = new_config.screen;
                 self.display_rgb_preview = new_config.display_rgb_preview;
                 self.downscale_method = downscale_index_to_filter(new_config.downscale_method_index);
-                self.frame_sleep = new_config.frame_sleep;
+                self.frame_limit = new_config.frame_limit;
                 self.red_shift_fix = new_config.red_shift_fix;
                 self.dark_mode = new_config.dark_mode;
                 self.check_updates = new_config.check_updates;
@@ -315,7 +317,8 @@ impl eframe::App for MyApp {
 
         self.toasts.show(ctx);
 
-        std::thread::sleep(std::time::Duration::from_millis(self.frame_sleep.0.into()));
+        self.next_frame = Duration::from_millis(((1.0/self.frame_limit.0 as f32) * 1000.0).round() as u64);
+        std::thread::sleep(self.next_frame - std::time::Duration::from_millis(1));
         ctx.request_repaint()
     }
 
@@ -326,7 +329,7 @@ impl eframe::App for MyApp {
             ConfigChange::Screen(self.screen),
             ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
             ConfigChange::DownscaleMethod(self.downscale_method),
-            ConfigChange::FrameSleep(self.frame_sleep),
+            ConfigChange::FrameLimit(self.frame_limit),
             ConfigChange::RedShiftFix(self.red_shift_fix),
             ConfigChange::Darkmode(self.dark_mode),
             ConfigChange::CheckUpdates(self.check_updates),
