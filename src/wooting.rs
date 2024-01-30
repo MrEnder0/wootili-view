@@ -73,23 +73,25 @@ pub fn draw_rgb(
                     (g as f32 * (brightness as f32 * 0.01)).round() as u8,
                     (b as f32 * (brightness as f32 * 0.01)).round() as u8,
                 );
+
+                continue;
             }
             let adjusted_r = if red_shift_fix {
-                r.saturating_sub(40)
+                r as f32 * 0.55
             } else {
-                r
+                r as f32
             };
             let adjusted_b = if red_shift_fix {
-                b.saturating_sub(10)
+                b as f32 * 1.2
             } else {
-                b
+                b as f32
             };
             wooting::wooting_rgb_array_set_single(
                 y as u8 + 1,
                 x as u8,
-                (adjusted_r as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (adjusted_r * (brightness as f32 * 0.01)).round() as u8,
                 (g as f32 * (brightness as f32 * 0.01)).round() as u8,
-                (adjusted_b as f32 * (brightness as f32 * 0.01)).round() as u8,
+                (adjusted_b * (brightness as f32 * 0.01)).round() as u8,
             );
         }
 
