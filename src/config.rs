@@ -43,6 +43,18 @@ pub fn read_config() -> Option<Config> {
         }
     };
 
+    if config.config_version != CONFIG_VERSION {
+        log_this(LogData {
+            importance: LogImportance::Warning,
+            message: format!(
+                "Config version mismatch, expected {}, got {}, will continue due to no formating errors found",
+                CONFIG_VERSION, config.config_version
+            ),
+        });
+
+        return None;
+    }
+
     Some(config)
 }
 
@@ -177,14 +189,5 @@ fn filter_to_downscale_index(filter: FilterType) -> u8 {
         FilterType::CatmullRom => 2,
         FilterType::Gaussian => 3,
         FilterType::Lanczos3 => 4,
-        _ => {
-            logf!(
-                Warning,
-                "Invalid downscale method {:?} defaulting to nearest neighbor",
-                filter
-            );
-
-            0
-        }
     }
 }
