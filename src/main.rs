@@ -10,7 +10,7 @@ use eframe::egui;
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
-use scorched::{logf, LogData, LogExpect, LogImportance};
+use scorched::{log_this, logf, LogData, LogExpect, LogImportance};
 use screenshots::Screen;
 use std::sync::RwLock;
 use ui::*;
@@ -281,6 +281,28 @@ impl eframe::App for MyApp {
                     ctx.set_visuals(egui::Visuals::dark());
                 } else {
                     ctx.set_visuals(egui::Visuals::light());
+                }
+            }
+            if ui.button("Clean Logs").on_hover_text("Cleans the logs folder").clicked() {
+                match std::fs::remove_dir_all(paths::logging_path()) {
+                    Ok(_) => {
+                        log_this(LogData {
+                            importance: LogImportance::Info,
+                            message: "Logs folder has been cleaned".to_string(),
+                        });
+                        self.toasts
+                            .info("Logs folder has been cleaned")
+                            .set_duration(Some(std::time::Duration::from_secs(3)));
+                    }
+                    Err(e) => {
+                        log_this(LogData {
+                            importance: LogImportance::Error,
+                            message: format!("Failed to clean logs folder: {}", e),
+                        });
+                        self.toasts
+                            .error(format!("Failed to clean logs folder: {}", e))
+                            .set_duration(Some(std::time::Duration::from_secs(5)));
+                    }
                 }
             }
 

@@ -140,6 +140,11 @@ fn get_lastest_ver() -> String {
         }
     };
 
+    log_this(LogData {
+        importance: scorched::LogImportance::Info,
+        message: format!("Successfully got lastest version info: {}", tag_name),
+    });
+
     tag_name.to_string()
 }
 
