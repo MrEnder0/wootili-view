@@ -320,30 +320,17 @@ impl eframe::App for MyApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
-        save_config_option(
+        save_config_option(ConfigChange::MultipleConfigOptions(vec![
+            ConfigChange::Brightness(self.brightness),
             ConfigChange::ReduceBrightEffects(self.reduce_bright_effects),
-            &mut self.toasts,
-        );
-        save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
-        save_config_option(
+            ConfigChange::Screen(self.screen),
             ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
-            &mut self.toasts,
-        );
-        save_config_option(
             ConfigChange::DownscaleMethod(self.downscale_method),
-            &mut self.toasts,
-        );
-        save_config_option(ConfigChange::FrameSleep(self.frame_sleep), &mut self.toasts);
-        save_config_option(
+            ConfigChange::FrameSleep(self.frame_sleep),
             ConfigChange::RedShiftFix(self.red_shift_fix),
-            &mut self.toasts,
-        );
-        save_config_option(ConfigChange::Darkmode(self.dark_mode), &mut self.toasts);
-        save_config_option(
+            ConfigChange::Darkmode(self.dark_mode),
             ConfigChange::CheckUpdates(self.check_updates),
-            &mut self.toasts,
-        );
+        ]), &mut self.toasts);
         wooting::exit_rgb();
     }
 }
