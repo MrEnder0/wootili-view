@@ -4,3 +4,4 @@
 [x] Add a reset settings option
 [ ] Clean up ui and make it feel like a product and not a tech demo
 [x] Dark and light mode with ctx.set_visuals(egui::Visuals::dark());
+[ ] Create an installer with inno setup
