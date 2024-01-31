@@ -76,23 +76,17 @@ pub fn draw_rgb(
 
                 continue;
             }
-            let adjusted_r = if red_shift_fix {
-                r as f32 * 0.55
-            } else {
-                r as f32
+            
+            let (adjusted_r, adjusted_b) = match (red_shift_fix, r, b) {
+                (true, r, b) => (r as f32 * 0.55, b as f32 * 1.2),
+                (false, r, b) => (r as f32, b as f32),
             };
-            let adjusted_b = if red_shift_fix {
-                b as f32 * 1.2
-            } else {
-                b as f32
-            };
-            wooting::wooting_rgb_array_set_single(
-                y as u8 + 1,
-                x as u8,
-                (adjusted_r * (brightness as f32 * 0.01)).round() as u8,
-                (g as f32 * (brightness as f32 * 0.01)).round() as u8,
-                (adjusted_b * (brightness as f32 * 0.01)).round() as u8,
-            );
+            
+            let red = (adjusted_r * (brightness as f32 * 0.01)).round() as u8;
+            let green = (g as f32 * (brightness as f32 * 0.01)).round() as u8;
+            let blue = (adjusted_b * (brightness as f32 * 0.01)).round() as u8;
+            
+            wooting::wooting_rgb_array_set_single(y as u8 + 1, x as u8, red, green, blue);
         }
 
         wooting::wooting_rgb_array_update_keyboard();
