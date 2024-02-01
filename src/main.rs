@@ -37,32 +37,36 @@ fn main() -> Result<(), eframe::Error> {
     wooting::update_rgb();
 
     // Screen thread, captures the screen and stores it in the static SCREEN
-    std::thread::spawn(|| loop {
-        let frame_rgb_size = *RGB_SIZE.read().unwrap();
+    std::thread::spawn(|| {
+        let mut next_frame: Duration;
+        loop {
+            let frame_rgb_size = *RGB_SIZE.read().unwrap();
 
-        let monitors = Monitor::all().unwrap();
-        let capture = monitors[*SCREEN_INDEX.read().unwrap()]
-            .capture_image()
-            .unwrap();
+            let monitors = Monitor::all().unwrap();
+            let capture = monitors[*SCREEN_INDEX.read().unwrap()]
+                .capture_image()
+                .unwrap();
 
-        let img = image::DynamicImage::ImageRgba8(
-            image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-                .log_expect(
-                    LogImportance::Error,
-                    "Failed to convert capture to image buffer",
-                ),
-        );
-        let resized_capture = img.resize_exact(
-            frame_rgb_size.0,
-            frame_rgb_size.1,
-            *DOWNSCALE_METHOD.read().unwrap(),
-        );
+            let img = image::DynamicImage::ImageRgba8(
+                image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
+                    .log_expect(
+                        LogImportance::Error,
+                        "Failed to convert capture to image buffer",
+                    ),
+            );
+            let resized_capture = img.resize_exact(
+                frame_rgb_size.0,
+                frame_rgb_size.1,
+                *DOWNSCALE_METHOD.read().unwrap(),
+            );
 
-        SCREEN.write().unwrap().clone_from(&resized_capture);
+            SCREEN.write().unwrap().clone_from(&resized_capture);
 
-        std::thread::sleep(std::time::Duration::from_millis(
-            *CAPTURE_FRAME_LIMIT.read().unwrap(),
-        ));
+            next_frame = Duration::from_millis(
+                ((1.0 / *CAPTURE_FRAME_LIMIT.read().unwrap() as f32) * 1000.0).round() as u64,
+            );
+            std::thread::sleep(next_frame - Duration::from_millis(1));
+        }
     });
 
     eframe::run_native(
@@ -87,7 +91,7 @@ struct MyApp {
     red_shift_fix: bool,
     dark_mode: bool,
     check_updates: bool,
-    next_frame: std::time::Duration,
+    next_frame: Duration,
 }
 
 impl Default for MyApp {
@@ -118,19 +122,19 @@ impl eframe::App for MyApp {
             if !cfg!(windows) {
                 self.toasts
                     .error("This application is not supported on your operating system")
-                    .set_duration(Some(std::time::Duration::from_secs(120)));
+                    .set_duration(Some(Duration::from_secs(120)));
             }
             logf!(Info, "Connected to device Name: {}", self.device_name);
             match self.device_name.as_str() {
                 "N/A" => {
                     self.toasts
                         .error("No Wooting Device Found")
-                        .set_duration(Some(std::time::Duration::from_secs(5)));
+                        .set_duration(Some(Duration::from_secs(5)));
                 }
                 _ => {
                     self.toasts
                         .success(format!("Connected to {}", self.device_name))
-                        .set_duration(Some(std::time::Duration::from_secs(3)));
+                        .set_duration(Some(Duration::from_secs(3)));
                 }
             };
 
@@ -141,7 +145,7 @@ impl eframe::App for MyApp {
 
                     self.toasts
                         .warning("Config file has been reset due to a config format error")
-                        .set_duration(Some(std::time::Duration::from_secs(5)));
+                        .set_duration(Some(Duration::from_secs(5)));
 
                     read_config().unwrap()
                 }
@@ -267,7 +271,7 @@ impl eframe::App for MyApp {
                 reset_config();
                 self.toasts
                     .info("Config file has been reset")
-                    .set_duration(Some(std::time::Duration::from_secs(1)));
+                    .set_duration(Some(Duration::from_secs(1)));
 
                 let new_config = read_config().unwrap();
 
@@ -293,13 +297,13 @@ impl eframe::App for MyApp {
                         logf!(Info, "Logs folder has been cleaned");
                         self.toasts
                             .info("Logs folder has been cleaned")
-                            .set_duration(Some(std::time::Duration::from_secs(3)));
+                            .set_duration(Some(Duration::from_secs(3)));
                     }
                     Err(e) => {
                         logf!(Error, "Failed to clean logs folder: {}", e);
                         self.toasts
                             .error(format!("Failed to clean logs folder: {}", e))
-                            .set_duration(Some(std::time::Duration::from_secs(5)));
+                            .set_duration(Some(Duration::from_secs(5)));
                     }
                 }
             }
@@ -321,7 +325,7 @@ impl eframe::App for MyApp {
 
         self.next_frame =
             Duration::from_millis(((1.0 / self.frame_limit.0 as f32) * 1000.0).round() as u64);
-        std::thread::sleep(self.next_frame - std::time::Duration::from_millis(1));
+        std::thread::sleep(self.next_frame - Duration::from_millis(1));
         ctx.request_repaint()
     }
 
