@@ -11,9 +11,9 @@ use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use scorched::{logf, LogData, LogExpect, LogImportance};
-use screenshots::Screen;
 use std::{sync::RwLock, time::Duration};
 use ui::*;
+use xcap::Monitor;
 
 // Statics for screen thread
 lazy_static! {
@@ -40,12 +40,17 @@ fn main() -> Result<(), eframe::Error> {
     std::thread::spawn(|| loop {
         let frame_rgb_size = *RGB_SIZE.read().unwrap();
 
-        let screens = Screen::all().unwrap();
-        let capture = screens[*SCREEN_INDEX.read().unwrap()].capture().unwrap();
+        let monitors = Monitor::all().unwrap();
+        let capture = monitors[*SCREEN_INDEX.read().unwrap()]
+            .capture_image()
+            .unwrap();
 
         let img = image::DynamicImage::ImageRgba8(
             image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-                .log_expect(LogImportance::Error, "Failed to convert capture to image buffer"),
+                .log_expect(
+                    LogImportance::Error,
+                    "Failed to convert capture to image buffer",
+                ),
         );
         let resized_capture = img.resize_exact(
             frame_rgb_size.0,
@@ -197,13 +202,10 @@ impl eframe::App for MyApp {
             self.device_name = wooting::get_device_name();
             self.device_creation = wooting::get_device_creation();
 
-            RGB_SIZE
-                .write()
-                .unwrap()
-                .clone_from(&wooting::get_rgb_size().log_expect(
-                    scorched::LogImportance::Error,
-                    "Failed to get rgb size",
-                ));
+            RGB_SIZE.write().unwrap().clone_from(
+                &wooting::get_rgb_size()
+                    .log_expect(scorched::LogImportance::Error, "Failed to get rgb size"),
+            );
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -214,7 +216,7 @@ impl eframe::App for MyApp {
             if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() {
                 save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
             }
-            if ui.add(egui::Slider::new(&mut self.screen, 0..=Screen::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
+            if ui.add(egui::Slider::new(&mut self.screen, 0..=Monitor::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
                 *SCREEN_INDEX.write().unwrap() = self.screen;
             }
@@ -317,23 +319,27 @@ impl eframe::App for MyApp {
 
         self.toasts.show(ctx);
 
-        self.next_frame = Duration::from_millis(((1.0/self.frame_limit.0 as f32) * 1000.0).round() as u64);
+        self.next_frame =
+            Duration::from_millis(((1.0 / self.frame_limit.0 as f32) * 1000.0).round() as u64);
         std::thread::sleep(self.next_frame - std::time::Duration::from_millis(1));
         ctx.request_repaint()
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        save_config_option(ConfigChange::MultipleConfigOptions(vec![
-            ConfigChange::Brightness(self.brightness),
-            ConfigChange::ReduceBrightEffects(self.reduce_bright_effects),
-            ConfigChange::Screen(self.screen),
-            ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
-            ConfigChange::DownscaleMethod(self.downscale_method),
-            ConfigChange::FrameLimit(self.frame_limit),
-            ConfigChange::RedShiftFix(self.red_shift_fix),
-            ConfigChange::Darkmode(self.dark_mode),
-            ConfigChange::CheckUpdates(self.check_updates),
-        ]), &mut self.toasts);
+        save_config_option(
+            ConfigChange::MultipleConfigOptions(vec![
+                ConfigChange::Brightness(self.brightness),
+                ConfigChange::ReduceBrightEffects(self.reduce_bright_effects),
+                ConfigChange::Screen(self.screen),
+                ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
+                ConfigChange::DownscaleMethod(self.downscale_method),
+                ConfigChange::FrameLimit(self.frame_limit),
+                ConfigChange::RedShiftFix(self.red_shift_fix),
+                ConfigChange::Darkmode(self.dark_mode),
+                ConfigChange::CheckUpdates(self.check_updates),
+            ]),
+            &mut self.toasts,
+        );
         wooting::exit_rgb();
     }
 }

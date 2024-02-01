@@ -1,6 +1,6 @@
 use std::{env::home_dir, path::PathBuf};
 
-use scorched::{log_this, LogExpect, LogImportance, LogData};
+use scorched::{log_this, LogData, LogExpect, LogImportance};
 
 pub fn logging_path() -> PathBuf {
     match home_dir() {
@@ -14,10 +14,9 @@ pub fn logging_path() -> PathBuf {
                 importance: LogImportance::Warning,
                 message: "Unable to get home directory, defaulting to current path".to_string(),
             });
-            std::env::current_dir().log_expect(
-                LogImportance::Error,
-                "Unable to get current directory",
-            ).join("logs")
+            std::env::current_dir()
+                .log_expect(LogImportance::Error, "Unable to get current directory")
+                .join("logs")
         }
     }
 }
@@ -30,10 +29,8 @@ pub fn config_path() -> PathBuf {
                 importance: LogImportance::Warning,
                 message: "Unable to get home directory, defaulting to current path".to_string(),
             });
-            std::env::current_dir().log_expect(
-                LogImportance::Error,
-                "Unable to get current directory",
-            )
+            std::env::current_dir()
+                .log_expect(LogImportance::Error, "Unable to get current directory")
         }
     }
 }

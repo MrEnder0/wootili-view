@@ -10,7 +10,9 @@ pub fn get_rgb_size() -> Option<(u32, u32)> {
     match model_name.as_str() {
         //TODO: Verify these sizes for the one two and uwu
         "Wooting One" => Some((17, 6)),
-        "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => Some((17, 6)),
+        "Wooting Two" | "Wooting Two LE" | "Wooting Two HE" | "Wooting Two HE (ARM)" => {
+            Some((17, 6))
+        }
         "Wooting 60HE" | "Wooting 60HE (ARM)" => Some((14, 5)),
         "Wooting UwU" | "Wooting UwU RGB" => Some((3, 1)),
         _ => {
@@ -28,7 +30,10 @@ pub fn get_device_name() -> String {
         let wooting_usb_meta = *wooting::wooting_usb_get_meta();
         let model = CStr::from_ptr(wooting_usb_meta.model);
 
-        model.to_str().log_expect(LogImportance::Error, "Failed to convert device name to str").to_string()
+        model
+            .to_str()
+            .log_expect(LogImportance::Error, "Failed to convert device name to str")
+            .to_string()
     }
 }
 
@@ -76,16 +81,16 @@ pub fn draw_rgb(
 
                 continue;
             }
-            
+
             let (adjusted_r, adjusted_b) = match (red_shift_fix, r, b) {
                 (true, r, b) => (r as f32 * 0.55, b as f32 * 1.2),
                 (false, r, b) => (r as f32, b as f32),
             };
-            
+
             let red = (adjusted_r * (brightness as f32 * 0.01)).round() as u8;
             let green = (g as f32 * (brightness as f32 * 0.01)).round() as u8;
             let blue = (adjusted_b * (brightness as f32 * 0.01)).round() as u8;
-            
+
             wooting::wooting_rgb_array_set_single(y as u8 + 1, x as u8, red, green, blue);
         }
 

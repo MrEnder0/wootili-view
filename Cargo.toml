@@ -9,11 +9,11 @@ edition = "2021"
 wooting-rgb-sys = "0.3.0"
 eframe = "0.25.0"
 image = "0.24.8"
-screenshots = "0.8.7"
+xcap = "0.0.3"
 egui-notify = "0.12.0"
 lazy_static = "1.4.0"
 scorched = "0.5.1"
-reqwest = { version = "0.11.23", features = ["blocking"] }
+reqwest = { version = "0.11.24", features = ["blocking"] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 ron = "0.8.1"
