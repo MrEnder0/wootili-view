@@ -5,7 +5,7 @@ use reqwest::header::{HeaderMap, USER_AGENT};
 use scorched::{log_this, LogData, LogExpect};
 use std::sync::OnceLock;
 
-use crate::{save_config_option, wooting, ConfigChange, DOWNSCALE_METHOD, RGB_SIZE};
+use crate::{capture::CAPTURE_SETTINGS, save_config_option, wooting, ConfigChange, RGB_SIZE};
 
 pub fn downscale_label(
     ui: &mut Ui,
@@ -21,8 +21,8 @@ pub fn downscale_label(
         .clicked()
     {
         save_config_option(ConfigChange::DownscaleMethod(new), toasts);
-        DOWNSCALE_METHOD.write().unwrap().clone_from(&new);
-        *crate::SETTINGS_RELOAD.write().unwrap() = true;
+        CAPTURE_SETTINGS.write().unwrap().downscale_method = new;
+        *crate::capture::CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
         *current = new;
     }
 }

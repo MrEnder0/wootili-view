@@ -1,32 +1,23 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod capture;
 mod config;
 mod paths;
 mod ui;
 mod wooting;
 
+use capture::{capture, CAPTURE_SETTINGS};
 use config::*;
 use eframe::egui;
 use egui_notify::Toasts;
-use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use lazy_static::lazy_static;
+use image::{imageops::FilterType, GenericImageView};
 use scorched::{logf, LogData, LogExpect, LogImportance};
-use std::{sync::RwLock, time::Duration};
+use std::time::Duration;
 use ui::*;
+use wooting::RGB_SIZE;
 use xcap::Monitor;
 
-// Statics for screen thread
-lazy_static! {
-    static ref SCREEN: RwLock<DynamicImage> = RwLock::new({
-        let img = image::ImageBuffer::new(1, 1);
-        image::DynamicImage::ImageRgba8(img)
-    });
-}
-static RGB_SIZE: RwLock<(u32, u32)> = RwLock::new((0, 0));
-static SCREEN_INDEX: RwLock<usize> = RwLock::new(0);
-static DOWNSCALE_METHOD: RwLock<FilterType> = RwLock::new(FilterType::Triangle);
-static CAPTURE_FRAME_LIMIT: RwLock<u64> = RwLock::new(10);
-static SETTINGS_RELOAD: RwLock<bool> = RwLock::new(false);
+use crate::capture::CAPTURE_SETTINGS_RELOAD;
 
 fn main() -> Result<(), eframe::Error> {
     scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
@@ -39,45 +30,7 @@ fn main() -> Result<(), eframe::Error> {
 
     // Screen thread, captures the screen and stores it in the static SCREEN
     std::thread::spawn(|| {
-        let mut next_frame: Duration;
-        let mut screen_index = 0;
-        let mut downscale_method = FilterType::Triangle;
-        let mut capture_frame_limit = 10;
-
-        loop {
-            if *SETTINGS_RELOAD.read().unwrap() {
-                screen_index = *SCREEN_INDEX.read().unwrap();
-                downscale_method = *DOWNSCALE_METHOD.read().unwrap();
-                capture_frame_limit = *CAPTURE_FRAME_LIMIT.read().unwrap();
-                *SETTINGS_RELOAD.write().unwrap() = false;
-            }
-            let frame_rgb_size = *RGB_SIZE.read().unwrap();
-
-            let monitors = Monitor::all().unwrap();
-            let capture = monitors[screen_index]
-                .capture_image()
-                .unwrap();
-
-            let img = image::DynamicImage::ImageRgba8(
-                image::ImageBuffer::from_raw(capture.width(), capture.height(), capture.to_vec())
-                    .log_expect(
-                        LogImportance::Error,
-                        "Failed to convert capture to image buffer",
-                    ),
-            );
-            let resized_capture = img.resize_exact(
-                frame_rgb_size.0,
-                frame_rgb_size.1,
-                downscale_method,
-            );
-
-            SCREEN.write().unwrap().clone_from(&resized_capture);
-
-            next_frame = Duration::from_millis(
-                ((1.0 / capture_frame_limit as f32) * 1000.0).round() as u64,
-            );
-            std::thread::sleep(next_frame - Duration::from_millis(1));
-        }
+        capture();
     });
 
     eframe::run_native(
@@ -178,7 +131,7 @@ impl eframe::App for MyApp {
                 ctx.set_visuals(egui::Visuals::light());
             }
 
-            *SETTINGS_RELOAD.write().unwrap() = true;
+            *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             self.init = false;
         }
 
@@ -186,7 +139,7 @@ impl eframe::App for MyApp {
         let mut resized_capture = image::DynamicImage::new_rgba8(1, 1);
 
         if frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0 {
-            resized_capture = SCREEN.read().unwrap().clone();
+            resized_capture = wooting::SCREEN.read().unwrap().clone();
 
             if self.reduce_bright_effects {
                 let avg_screen =
@@ -234,8 +187,8 @@ impl eframe::App for MyApp {
             }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Monitor::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
-                *SETTINGS_RELOAD.write().unwrap() = true;
-                *SCREEN_INDEX.write().unwrap() = self.screen;
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                CAPTURE_SETTINGS.write().unwrap().screen_index = self.screen;
             }
             if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
                 save_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects), &mut self.toasts);
@@ -258,7 +211,7 @@ impl eframe::App for MyApp {
             }
             if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
-                *CAPTURE_FRAME_LIMIT.write().unwrap() = self.frame_limit.1.into();
+                CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
             }
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
@@ -298,7 +251,7 @@ impl eframe::App for MyApp {
                 self.dark_mode = new_config.dark_mode;
                 self.check_updates = new_config.check_updates;
 
-                *SETTINGS_RELOAD.write().unwrap() = true;
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
 
                 if self.dark_mode {
                     ctx.set_visuals(egui::Visuals::dark());

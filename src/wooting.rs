@@ -1,8 +1,17 @@
-use std::ffi::CStr;
+use std::{ffi::CStr, sync::RwLock};
 
-use image::GenericImageView;
+use image::{DynamicImage, GenericImageView};
+use lazy_static::lazy_static;
 use scorched::{logf, LogData, LogExpect, LogImportance};
 use wooting_rgb_sys as wooting;
+
+lazy_static! {
+    pub static ref SCREEN: RwLock<DynamicImage> = RwLock::new({
+        let img = image::ImageBuffer::new(1, 1);
+        image::DynamicImage::ImageRgba8(img)
+    });
+}
+pub static RGB_SIZE: RwLock<(u32, u32)> = RwLock::new((0, 0));
 
 pub fn get_rgb_size() -> Option<(u32, u32)> {
     let model_name = get_device_name();
