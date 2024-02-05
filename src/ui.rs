@@ -22,6 +22,7 @@ pub fn downscale_label(
     {
         save_config_option(ConfigChange::DownscaleMethod(new), toasts);
         DOWNSCALE_METHOD.write().unwrap().clone_from(&new);
+        *crate::SETTINGS_RELOAD.write().unwrap() = true;
         *current = new;
     }
 }
