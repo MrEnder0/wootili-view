@@ -2,8 +2,8 @@ use std::{sync::RwLock, time::Duration};
 
 use crate::wooting;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use scorched::{LogExpect, LogImportance};
 use lazy_static::lazy_static;
+use scorched::{LogExpect, LogImportance};
 use xcap::Monitor;
 
 #[derive(Clone)]
@@ -134,7 +134,7 @@ pub fn capture() {
             current_settings.device_name = wooting::get_device_name();
 
             current_settings.rgb_size = wooting::get_rgb_size()
-                    .log_expect(scorched::LogImportance::Error, "Failed to get rgb size");
+                .log_expect(scorched::LogImportance::Error, "Failed to get rgb size");
         }
 
         next_frame = Duration::from_millis(

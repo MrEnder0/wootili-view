@@ -14,7 +14,7 @@ use std::time::Duration;
 use ui::*;
 use xcap::Monitor;
 
-use crate::capture::{CAPTURE_SETTINGS_RELOAD, CAPTURE_LOCK};
+use crate::capture::{CAPTURE_LOCK, CAPTURE_SETTINGS_RELOAD};
 
 fn main() -> Result<(), eframe::Error> {
     scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
