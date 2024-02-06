@@ -11,7 +11,6 @@ lazy_static! {
         image::DynamicImage::ImageRgba8(img)
     });
 }
-pub static RGB_SIZE: RwLock<(u32, u32)> = RwLock::new((0, 0));
 
 pub fn get_rgb_size() -> Option<(u32, u32)> {
     let model_name = get_device_name();

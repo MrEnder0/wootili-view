@@ -1,5 +1,3 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 mod capture;
 mod config;
 mod paths;
@@ -14,10 +12,9 @@ use image::imageops::FilterType;
 use scorched::{logf, LogData, LogImportance};
 use std::time::Duration;
 use ui::*;
-use wooting::RGB_SIZE;
 use xcap::Monitor;
 
-use crate::capture::CAPTURE_SETTINGS_RELOAD;
+use crate::capture::{CAPTURE_SETTINGS_RELOAD, CAPTURE_LOCK};
 
 fn main() -> Result<(), eframe::Error> {
     scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
@@ -27,6 +24,8 @@ fn main() -> Result<(), eframe::Error> {
     }
 
     wooting::update_rgb();
+
+    *CAPTURE_LOCK.write().unwrap() = true;
 
     // Screen thread, captures the screen and stores it in the static SCREEN
     std::thread::spawn(|| {
@@ -54,6 +53,7 @@ struct MyApp {
     dark_mode: bool,
     check_updates: bool,
     device_creation: String,
+    rgb_size: (u32, u32),
     next_frame: Duration,
 }
 
@@ -73,6 +73,7 @@ impl Default for MyApp {
             dark_mode: true,
             check_updates: true,
             device_creation: wooting::get_device_creation(),
+            rgb_size: wooting::get_rgb_size().unwrap(),
             next_frame: Duration::from_secs(0),
         }
     }
@@ -130,8 +131,11 @@ impl eframe::App for MyApp {
             CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
             CAPTURE_SETTINGS.write().unwrap().brightness = self.brightness;
             CAPTURE_SETTINGS.write().unwrap().display_rgb_preview = self.display_rgb_preview;
+            CAPTURE_SETTINGS.write().unwrap().device_name = self.device_name.clone();
+            CAPTURE_SETTINGS.write().unwrap().rgb_size = wooting::get_rgb_size().unwrap_or((0, 0));
 
             *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+            *CAPTURE_LOCK.write().unwrap() = false;
 
             if self.dark_mode {
                 ctx.set_visuals(egui::Visuals::dark());
@@ -186,7 +190,7 @@ impl eframe::App for MyApp {
                 *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             }
 
-            let frame_rgb_size = *RGB_SIZE.read().unwrap();
+            let frame_rgb_size = self.rgb_size;
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
             if ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance").changed() {

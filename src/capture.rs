@@ -1,6 +1,6 @@
 use std::{sync::RwLock, time::Duration};
 
-use crate::wooting::{self, RGB_SIZE};
+use crate::wooting;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use scorched::{LogExpect, LogImportance};
 use lazy_static::lazy_static;
@@ -15,6 +15,7 @@ pub struct CaptureSettings {
     pub red_shift_fix: bool,
     pub brightness: u8,
     pub device_name: String,
+    pub rgb_size: (u32, u32),
     pub display_rgb_preview: bool,
 }
 
@@ -27,8 +28,10 @@ pub static CAPTURE_SETTINGS: RwLock<CaptureSettings> = RwLock::new(CaptureSettin
     brightness: 100,
     capture_frame_limit: 10,
     device_name: String::new(),
+    rgb_size: (0, 0),
     display_rgb_preview: false,
 });
+pub static CAPTURE_LOCK: RwLock<bool> = RwLock::new(false);
 lazy_static! {
     pub static ref CAPTURE_PREVIEW: RwLock<DynamicImage> = RwLock::new({
         let img = image::ImageBuffer::new(1, 1);
@@ -44,19 +47,24 @@ pub fn capture() {
         red_shift_fix: false,
         brightness: 100,
         capture_frame_limit: 10,
-        device_name: String::new(),
+        device_name: wooting::get_device_name(),
+        rgb_size: (0, 0),
         display_rgb_preview: false,
     };
     let mut last_frame = DynamicImage::new_rgba8(1, 1);
     let mut next_frame: Duration;
 
     loop {
+        if *CAPTURE_LOCK.read().unwrap() {
+            std::thread::sleep(Duration::from_millis(10));
+            continue;
+        }
+
         if *CAPTURE_SETTINGS_RELOAD.read().unwrap() {
             current_settings = CAPTURE_SETTINGS.read().unwrap().clone();
             *CAPTURE_SETTINGS_RELOAD.write().unwrap() = false;
         }
 
-        let frame_rgb_size = *RGB_SIZE.read().unwrap();
         let mut current_frame_reduce = false;
 
         let monitors = Monitor::all().unwrap();
@@ -84,8 +92,8 @@ pub fn capture() {
         last_frame = img.clone();
 
         let rgb_screen = img.resize_exact(
-            frame_rgb_size.0,
-            frame_rgb_size.1,
+            current_settings.rgb_size.0,
+            current_settings.rgb_size.1,
             current_settings.downscale_method,
         );
 
@@ -93,7 +101,7 @@ pub fn capture() {
             *CAPTURE_PREVIEW.write().unwrap() = rgb_screen.clone();
         }
 
-        let frame_rgb_size = *RGB_SIZE.read().unwrap();
+        let frame_rgb_size: (u32, u32) = current_settings.rgb_size;
         if frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0 {
             let resized_capture = rgb_screen.clone();
 
@@ -125,10 +133,8 @@ pub fn capture() {
             wooting::reconnect_device();
             current_settings.device_name = wooting::get_device_name();
 
-            RGB_SIZE.write().unwrap().clone_from(
-                &wooting::get_rgb_size()
-                    .log_expect(scorched::LogImportance::Error, "Failed to get rgb size"),
-            );
+            current_settings.rgb_size = wooting::get_rgb_size()
+                    .log_expect(scorched::LogImportance::Error, "Failed to get rgb size");
         }
 
         next_frame = Duration::from_millis(

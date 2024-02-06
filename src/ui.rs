@@ -2,10 +2,10 @@ use eframe::egui::{self, Hyperlink, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use reqwest::header::{HeaderMap, USER_AGENT};
-use scorched::{log_this, LogData, LogExpect};
+use scorched::{log_this, LogData};
 use std::sync::OnceLock;
 
-use crate::{capture::CAPTURE_SETTINGS, save_config_option, wooting, ConfigChange, RGB_SIZE};
+use crate::{capture::CAPTURE_SETTINGS, save_config_option, wooting, ConfigChange};
 
 pub fn downscale_label(
     ui: &mut Ui,
@@ -62,11 +62,15 @@ pub fn display_device_info(
             toasts
                 .info("Refreshing Device Info")
                 .set_duration(Some(std::time::Duration::from_secs(1)));
+
+            *crate::capture::CAPTURE_LOCK.write().unwrap() = true;
             wooting::reconnect_device();
-            *init = true;
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            *crate::capture::CAPTURE_LOCK.write().unwrap() = false;
+
             *device_name = wooting::get_device_name();
             *device_creation = wooting::get_device_creation();
-            RGB_SIZE.write().unwrap().clone_from(&wooting::get_rgb_size().log_expect(scorched::LogImportance::Error, "Failed to get rgb size"));
+            *init = true;
         }
     });
     ui.add(egui::Label::new(format!("Name: {}", device_name,)));
