@@ -16,7 +16,7 @@ use std::time::Duration;
 use ui::*;
 use xcap::Monitor;
 
-use crate::capture::{CAPTURE_LOCK, CAPTURE_SETTINGS_RELOAD};
+use crate::capture::{CaptureSettings, CAPTURE_LOCK, CAPTURE_SETTINGS_RELOAD};
 
 fn main() -> Result<(), eframe::Error> {
     scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
@@ -126,15 +126,17 @@ impl eframe::App for MyApp {
             self.dark_mode = config.dark_mode;
             self.check_updates = config.check_updates;
 
-            CAPTURE_SETTINGS.write().unwrap().screen_index = self.screen;
-            CAPTURE_SETTINGS.write().unwrap().downscale_method = self.downscale_method;
-            CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
-            CAPTURE_SETTINGS.write().unwrap().reduce_bright_effects = self.reduce_bright_effects;
-            CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
-            CAPTURE_SETTINGS.write().unwrap().brightness = self.brightness;
-            CAPTURE_SETTINGS.write().unwrap().display_rgb_preview = self.display_rgb_preview;
-            CAPTURE_SETTINGS.write().unwrap().device_name = self.device_name.clone();
-            CAPTURE_SETTINGS.write().unwrap().rgb_size = wooting::get_rgb_size().unwrap_or((0, 0));
+            *CAPTURE_SETTINGS.write().unwrap() = CaptureSettings {
+                screen_index: self.screen,
+                downscale_method: self.downscale_method,
+                capture_frame_limit: self.frame_limit.1.into(),
+                reduce_bright_effects: self.reduce_bright_effects,
+                red_shift_fix: self.red_shift_fix,
+                brightness: self.brightness,
+                device_name: self.device_name.clone(),
+                rgb_size: wooting::get_rgb_size().unwrap_or((0, 0)),
+                display_rgb_preview: self.display_rgb_preview,
+            };
 
             *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             *CAPTURE_LOCK.write().unwrap() = false;
