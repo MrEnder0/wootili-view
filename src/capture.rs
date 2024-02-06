@@ -47,6 +47,7 @@ pub fn capture() {
         device_name: String::new(),
         display_rgb_preview: false,
     };
+    let mut last_frame = DynamicImage::new_rgba8(1, 1);
     let mut next_frame: Duration;
 
     loop {
@@ -70,6 +71,17 @@ pub fn capture() {
                     "Failed to convert capture to image buffer",
                 ),
         );
+
+        // If the image is the same as the last frame, we don't need to process it
+        if img == last_frame {
+            next_frame = Duration::from_millis(
+                ((1.0 / current_settings.capture_frame_limit as f32) * 1000.0).round() as u64,
+            );
+            std::thread::sleep(next_frame - Duration::from_millis(1));
+            continue;
+        }
+
+        last_frame = img.clone();
 
         let rgb_screen = img.resize_exact(
             frame_rgb_size.0,
