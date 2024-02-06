@@ -6,12 +6,12 @@ mod paths;
 mod ui;
 mod wooting;
 
-use capture::{capture, CAPTURE_SETTINGS};
+use capture::{capture, CAPTURE_PREVIEW, CAPTURE_SETTINGS};
 use config::*;
 use eframe::egui;
 use egui_notify::Toasts;
-use image::{imageops::FilterType, GenericImageView};
-use scorched::{logf, LogData, LogExpect, LogImportance};
+use image::imageops::FilterType;
+use scorched::{logf, LogData, LogImportance};
 use std::time::Duration;
 use ui::*;
 use wooting::RGB_SIZE;
@@ -44,10 +44,8 @@ struct MyApp {
     toasts: Toasts,
     init: bool,
     device_name: String,
-    device_creation: String,
     brightness: u8,
     reduce_bright_effects: bool,
-    current_frame_reduce: bool,
     screen: usize,
     display_rgb_preview: bool,
     downscale_method: FilterType,
@@ -55,6 +53,7 @@ struct MyApp {
     red_shift_fix: bool,
     dark_mode: bool,
     check_updates: bool,
+    device_creation: String,
     next_frame: Duration,
 }
 
@@ -64,10 +63,8 @@ impl Default for MyApp {
             toasts: Toasts::default(),
             init: true,
             device_name: wooting::get_device_name(),
-            device_creation: wooting::get_device_creation(),
             brightness: 100,
             reduce_bright_effects: false,
-            current_frame_reduce: false,
             screen: 0,
             display_rgb_preview: true,
             downscale_method: FilterType::Triangle,
@@ -75,6 +72,7 @@ impl Default for MyApp {
             red_shift_fix: false,
             dark_mode: true,
             check_updates: true,
+            device_creation: wooting::get_device_creation(),
             next_frame: Duration::from_secs(0),
         }
     }
@@ -125,56 +123,23 @@ impl eframe::App for MyApp {
             self.dark_mode = config.dark_mode;
             self.check_updates = config.check_updates;
 
+            CAPTURE_SETTINGS.write().unwrap().screen_index = self.screen;
+            CAPTURE_SETTINGS.write().unwrap().downscale_method = self.downscale_method;
+            CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
+            CAPTURE_SETTINGS.write().unwrap().reduce_bright_effects = self.reduce_bright_effects;
+            CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
+            CAPTURE_SETTINGS.write().unwrap().brightness = self.brightness;
+            CAPTURE_SETTINGS.write().unwrap().display_rgb_preview = self.display_rgb_preview;
+
+            *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+
             if self.dark_mode {
                 ctx.set_visuals(egui::Visuals::dark());
             } else {
                 ctx.set_visuals(egui::Visuals::light());
             }
 
-            *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             self.init = false;
-        }
-
-        let frame_rgb_size = *RGB_SIZE.read().unwrap();
-        let mut resized_capture = image::DynamicImage::new_rgba8(1, 1);
-
-        if frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0 {
-            resized_capture = wooting::SCREEN.read().unwrap().clone();
-
-            if self.reduce_bright_effects {
-                let avg_screen =
-                    resized_capture
-                        .clone()
-                        .resize(1, 1, image::imageops::FilterType::Gaussian);
-
-                let image::Rgba([r, g, b, _]) = avg_screen.get_pixel(0, 0);
-
-                if r > 220 || g > 220 || b > 220 {
-                    self.current_frame_reduce = true;
-                    self.brightness -= 50;
-                }
-            }
-
-            wooting::draw_rgb(
-                resized_capture.clone(),
-                self.brightness,
-                self.red_shift_fix,
-                self.device_name.clone(),
-            );
-
-            if self.current_frame_reduce {
-                self.brightness += 50;
-                self.current_frame_reduce = false;
-            }
-        } else {
-            wooting::reconnect_device();
-            self.device_name = wooting::get_device_name();
-            self.device_creation = wooting::get_device_creation();
-
-            RGB_SIZE.write().unwrap().clone_from(
-                &wooting::get_rgb_size()
-                    .log_expect(scorched::LogImportance::Error, "Failed to get rgb size"),
-            );
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -184,17 +149,23 @@ impl eframe::App for MyApp {
             ui.heading("Visual");
             if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() {
                 save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
+                CAPTURE_SETTINGS.write().unwrap().brightness = self.brightness;
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Monitor::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
                 CAPTURE_SETTINGS.write().unwrap().screen_index = self.screen;
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             }
             if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
                 save_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects), &mut self.toasts);
+                CAPTURE_SETTINGS.write().unwrap().reduce_bright_effects = self.reduce_bright_effects;
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             }
             if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() {
                 save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix), &mut self.toasts);
+                CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             }
             ui.menu_button("Downscale Method", |ui| {
                 downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent", &mut self.toasts);
@@ -212,7 +183,10 @@ impl eframe::App for MyApp {
             if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
+                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
             }
+
+            let frame_rgb_size = *RGB_SIZE.read().unwrap();
 
             let allow_preview = frame_rgb_size.0 != 0 && frame_rgb_size.1 != 0;
             if ui.add_enabled(allow_preview, egui::Checkbox::new(&mut self.display_rgb_preview, "Display RGB Preview")).on_hover_text("Displays a preview of the lighting, this can be disabled to improve performance").changed() {
@@ -282,7 +256,7 @@ impl eframe::App for MyApp {
 
             egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
                 if self.display_rgb_preview {
-                    rgb_preview(ui, frame_rgb_size, resized_capture);
+                    rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
                 }
                 display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init);
                 display_lighting_dimensions(ui, frame_rgb_size);
