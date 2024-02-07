@@ -22,7 +22,7 @@ pub fn downscale_label(
     {
         save_config_option(ConfigChange::DownscaleMethod(new), toasts);
         CAPTURE_SETTINGS.write().unwrap().downscale_method = new;
-        *crate::capture::CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+        crate::capture::CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
         *current = new;
     }
 }
@@ -63,10 +63,10 @@ pub fn display_device_info(
                 .info("Refreshing Device Info")
                 .set_duration(Some(std::time::Duration::from_secs(1)));
 
-            *crate::capture::CAPTURE_LOCK.write().unwrap() = true;
+            crate::capture::CAPTURE_LOCK.store(true, std::sync::atomic::Ordering::Relaxed);
             wooting::reconnect_device();
             std::thread::sleep(std::time::Duration::from_millis(100));
-            *crate::capture::CAPTURE_LOCK.write().unwrap() = false;
+            crate::capture::CAPTURE_LOCK.store(false, std::sync::atomic::Ordering::Relaxed);
 
             *device_name = wooting::get_device_name();
             *device_creation = wooting::get_device_creation();

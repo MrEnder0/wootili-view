@@ -27,7 +27,7 @@ fn main() -> Result<(), eframe::Error> {
 
     wooting::update_rgb();
 
-    *CAPTURE_LOCK.write().unwrap() = true;
+    CAPTURE_LOCK.store(true, std::sync::atomic::Ordering::Relaxed);
 
     // Screen thread, captures the screen and stores it in the static SCREEN
     std::thread::spawn(|| {
@@ -138,8 +138,8 @@ impl eframe::App for MyApp {
                 display_rgb_preview: self.display_rgb_preview,
             };
 
-            *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
-            *CAPTURE_LOCK.write().unwrap() = false;
+            CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+            CAPTURE_LOCK.store(false, std::sync::atomic::Ordering::Relaxed);
 
             if self.dark_mode {
                 ctx.set_visuals(egui::Visuals::dark());
@@ -158,22 +158,22 @@ impl eframe::App for MyApp {
             if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() {
                 save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().brightness = self.brightness;
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Monitor::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().screen_index = self.screen;
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
                 save_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().reduce_bright_effects = self.reduce_bright_effects;
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() {
                 save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             ui.menu_button("Downscale Method", |ui| {
                 downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent", &mut self.toasts);
@@ -191,7 +191,7 @@ impl eframe::App for MyApp {
             if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
 
             let frame_rgb_size = self.rgb_size;
@@ -233,7 +233,18 @@ impl eframe::App for MyApp {
                 self.dark_mode = new_config.dark_mode;
                 self.check_updates = new_config.check_updates;
 
-                *CAPTURE_SETTINGS_RELOAD.write().unwrap() = true;
+                *CAPTURE_SETTINGS.write().unwrap() = CaptureSettings {
+                    screen_index: self.screen,
+                    downscale_method: self.downscale_method,
+                    capture_frame_limit: self.frame_limit.1.into(),
+                    reduce_bright_effects: self.reduce_bright_effects,
+                    red_shift_fix: self.red_shift_fix,
+                    brightness: self.brightness,
+                    device_name: self.device_name.clone(),
+                    rgb_size: wooting::get_rgb_size().unwrap_or((0, 0)),
+                    display_rgb_preview: self.display_rgb_preview,
+                };
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
 
                 if self.dark_mode {
                     ctx.set_visuals(egui::Visuals::dark());

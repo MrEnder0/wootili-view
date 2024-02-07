@@ -1,10 +1,11 @@
-use std::{sync::RwLock, time::Duration};
+use std::{sync::{atomic::AtomicBool, RwLock}, time::Duration};
 
 use crate::wooting;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use scorched::{LogExpect, LogImportance};
 use xcap::Monitor;
+use std::sync::atomic::Ordering;
 
 #[derive(Clone)]
 pub struct CaptureSettings {
@@ -19,7 +20,7 @@ pub struct CaptureSettings {
     pub display_rgb_preview: bool,
 }
 
-pub static CAPTURE_SETTINGS_RELOAD: RwLock<bool> = RwLock::new(false);
+pub static CAPTURE_SETTINGS_RELOAD: AtomicBool = AtomicBool::new(false);
 pub static CAPTURE_SETTINGS: RwLock<CaptureSettings> = RwLock::new(CaptureSettings {
     screen_index: 0,
     downscale_method: FilterType::Triangle,
@@ -31,7 +32,7 @@ pub static CAPTURE_SETTINGS: RwLock<CaptureSettings> = RwLock::new(CaptureSettin
     rgb_size: (0, 0),
     display_rgb_preview: false,
 });
-pub static CAPTURE_LOCK: RwLock<bool> = RwLock::new(false);
+pub static CAPTURE_LOCK: AtomicBool = AtomicBool::new(false);
 lazy_static! {
     pub static ref CAPTURE_PREVIEW: RwLock<DynamicImage> = RwLock::new({
         let img = image::ImageBuffer::new(1, 1);
@@ -55,14 +56,14 @@ pub fn capture() {
     let mut next_frame: Duration;
 
     loop {
-        if *CAPTURE_LOCK.read().unwrap() {
+        if CAPTURE_LOCK.load(Ordering::Relaxed) {
             std::thread::sleep(Duration::from_millis(10));
             continue;
         }
 
-        if *CAPTURE_SETTINGS_RELOAD.read().unwrap() {
+        if CAPTURE_SETTINGS_RELOAD.load(Ordering::Relaxed) {
             current_settings = CAPTURE_SETTINGS.read().unwrap().clone();
-            *CAPTURE_SETTINGS_RELOAD.write().unwrap() = false;
+            CAPTURE_SETTINGS_RELOAD.store(false, Ordering::Relaxed);
         }
 
         let mut current_frame_reduce = false;
