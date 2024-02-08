@@ -36,7 +36,9 @@ fn main() -> Result<(), eframe::Error> {
 
     eframe::run_native(
         "Wootili-View",
-        eframe::NativeOptions::default(),
+        eframe::NativeOptions {
+            centered: true,
+            ..Default::default()},
         Box::new(move |_cc| Box::<MyApp>::default()),
     )
 }

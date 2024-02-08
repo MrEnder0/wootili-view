@@ -2,6 +2,7 @@
 [x] Create a config system that saves settings
 [x] Setting to check for updates on startup & make update ui better
 [x] Add a reset settings option
-[ ] Clean up ui and make it feel like a product and not a tech demo
+[o] Clean up ui and make it feel like a product and not a tech demo
 [x] Dark and light mode with ctx.set_visuals(egui::Visuals::dark());
-[ ] Create an installer with inno setup
+[x] Create an installer with inno setup
+[ ] Create an icon tray which can be used to hide the window while still running
