@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 wooting-rgb-sys = "0.3.0"
-eframe = "0.26.0"
+eframe = "0.26.1"
 image = "0.24.8"
 xcap = "0.0.3"
 egui-notify = "0.13.0"
@@ -17,3 +17,4 @@ reqwest = { version = "0.11.24", features = ["blocking"] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 ron = "0.8.1"
+ver-cmp = "0.1.2"

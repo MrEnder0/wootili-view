@@ -3,7 +3,7 @@ use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use reqwest::header::{HeaderMap, USER_AGENT};
 use scorched::{log_this, LogData};
-use std::sync::OnceLock;
+use std::{sync::OnceLock, cmp::Ordering};
 
 use crate::{capture::CAPTURE_SETTINGS, save_config_option, wooting, ConfigChange};
 
@@ -176,15 +176,40 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             ui.label("Failed to check for updates").on_hover_text(
                 "Failed to check for updates, try checking your internet connection",
             );
-        } else if latest_ver != env!("CARGO_PKG_VERSION") {
-            ui.separator();
-            ui.add(Hyperlink::from_label_and_url(
-                format!("Update Available: {}", latest_ver),
-                format!(
-                    "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
-                    latest_ver
-                ),
-            ));
+
+            return;
+        }
+
+        let version_cmp = match ver_cmp::compare_versions(
+            env!("CARGO_PKG_VERSION"),
+            latest_ver,
+        ) {
+            Ok(version_cmp) => version_cmp,
+            Err(_) => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Error,
+                    message: "Failed to compare versions, this is likly due to a version format error".to_string(),
+                });
+                return;
+            }
+        };
+
+        match version_cmp {
+            Ordering::Less => {
+                ui.separator();
+                ui.label("New Version Available").on_hover_ui(|ui| {
+                    ui.label(format!("New version available: {}", latest_ver));
+                    ui.hyperlink_to("Download", format!(
+                        "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
+                        latest_ver
+                    ));
+                });
+            }
+            Ordering::Greater => {
+                ui.separator();
+                ui.label("Developer Build").on_hover_text("You are using a developer build, this may be unstable or have unfinished features");
+            }
+            _ => {}
         }
     });
 }
