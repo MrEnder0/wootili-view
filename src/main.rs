@@ -8,7 +8,7 @@ mod wooting;
 
 use capture::{capture, CAPTURE_PREVIEW, CAPTURE_SETTINGS};
 use config::*;
-use eframe::egui;
+use eframe::{egui, emath::Rangef};
 use egui_notify::Toasts;
 use image::imageops::FilterType;
 use scorched::{logf, LogData, LogImportance};
@@ -38,7 +38,8 @@ fn main() -> Result<(), eframe::Error> {
         "Wootili-View",
         eframe::NativeOptions {
             centered: true,
-            ..Default::default()},
+            ..Default::default()
+        },
         Box::new(move |_cc| Box::<MyApp>::default()),
     )
 }
@@ -179,7 +180,7 @@ impl eframe::App for MyApp {
             }
             ui.menu_button("Downscale Method", |ui| {
                 downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent", &mut self.toasts);
-                downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio", &mut self.toasts);
+                downscale_label(ui, &mut self.downscale_method, FilterType::Triangle, "Triangle", "Overall good results and is fast, best speed to quality ratio (Default)", &mut self.toasts);
                 downscale_label(ui, &mut self.downscale_method, FilterType::Gaussian, "Gaussian", "Fast but gives poor results", &mut self.toasts);
                 downscale_label(ui, &mut self.downscale_method, FilterType::CatmullRom, "CatmullRom", "Good results but is slow, similar results to Lanczos3", &mut self.toasts);
                 downscale_label(ui, &mut self.downscale_method, FilterType::Lanczos3, "Lanczos3", "Gives the best results but is very slow", &mut self.toasts);
@@ -187,10 +188,10 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Performance");
-            if ui.add(egui::Slider::new(&mut self.frame_limit.0, 30..=120).text("UI FPS cap")).on_hover_text("Limits the FPS of the UI").changed() {
+            if ui.add(egui::Slider::new(&mut self.frame_limit.0, 25..=144).text("UI FPS cap")).on_hover_text("Limits the FPS of the UI").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
             }
-            if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device").changed() {
+            if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device, note it is likely that having this number super large will not result at the desired fps due to the speed of the rgb lights on the device").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
                 CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -275,7 +276,7 @@ impl eframe::App for MyApp {
                 version_footer(ui, self.check_updates);
             });
 
-            egui::SidePanel::right("lighting_preview_panel").show(ctx, |ui| {
+            egui::SidePanel::right("lighting_preview_panel").width_range(Rangef::new((self.rgb_size.0 * 15) as f32, (self.rgb_size.0 * 22) as f32)).show(ctx, |ui| {
                 if self.display_rgb_preview {
                     rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
                 }

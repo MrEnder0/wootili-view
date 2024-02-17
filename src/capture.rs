@@ -1,11 +1,14 @@
-use std::{sync::{atomic::AtomicBool, RwLock}, time::Duration};
+use std::{
+    sync::{atomic::AtomicBool, RwLock},
+    time::Duration,
+};
 
 use crate::wooting;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use scorched::{LogExpect, LogImportance};
-use xcap::Monitor;
 use std::sync::atomic::Ordering;
+use xcap::Monitor;
 
 #[derive(Clone)]
 pub struct CaptureSettings {

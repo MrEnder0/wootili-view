@@ -24,7 +24,10 @@ pub fn get_rgb_size() -> Option<(u32, u32)> {
         "Wooting 60HE" | "Wooting 60HE (ARM)" => Some((14, 5)),
         "Wooting UwU RGB" => Some((6, 4)),
         "Wooting UwU" => {
-            logf!(Warning, "Standard Wooting UwU device does not have any RGB lights, returning (0, 0)");
+            logf!(
+                Warning,
+                "Standard Wooting UwU device does not have any RGB lights, returning (0, 0)"
+            );
             Some((0, 0))
         }
         _ => {

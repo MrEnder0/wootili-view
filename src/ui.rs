@@ -1,9 +1,9 @@
-use eframe::egui::{self, Hyperlink, SelectableLabel, Ui};
+use eframe::egui::{self, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use reqwest::header::{HeaderMap, USER_AGENT};
 use scorched::{log_this, LogData};
-use std::{sync::OnceLock, cmp::Ordering};
+use std::{cmp::Ordering, sync::OnceLock};
 
 use crate::{capture::CAPTURE_SETTINGS, save_config_option, wooting, ConfigChange};
 

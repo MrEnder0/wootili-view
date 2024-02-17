@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 wooting-rgb-sys = "0.3.0"
-eframe = "0.26.1"
+eframe = "0.26.2"
 image = "0.24.8"
 xcap = "0.0.3"
 egui-notify = "0.13.0"
