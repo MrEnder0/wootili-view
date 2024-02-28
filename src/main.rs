@@ -236,6 +236,27 @@ impl eframe::App for MyApp {
                 self.dark_mode = new_config.dark_mode;
                 self.check_updates = new_config.check_updates;
 
+                if self.dark_mode {
+                    ctx.set_visuals(egui::Visuals::dark());
+                } else {
+                    ctx.set_visuals(egui::Visuals::light());
+                }
+
+                save_config_option(
+                    ConfigChange::MultipleConfigOptions(vec![
+                        ConfigChange::Brightness(self.brightness),
+                        ConfigChange::ReduceBrightEffects(self.reduce_bright_effects),
+                        ConfigChange::Screen(self.screen),
+                        ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
+                        ConfigChange::DownscaleMethod(self.downscale_method),
+                        ConfigChange::FrameLimit(self.frame_limit),
+                        ConfigChange::RedShiftFix(self.red_shift_fix),
+                        ConfigChange::Darkmode(self.dark_mode),
+                        ConfigChange::CheckUpdates(self.check_updates),
+                    ]),
+                    &mut self.toasts,
+                );
+    
                 *CAPTURE_SETTINGS.write().unwrap() = CaptureSettings {
                     screen_index: self.screen,
                     downscale_method: self.downscale_method,
@@ -247,13 +268,8 @@ impl eframe::App for MyApp {
                     rgb_size: wooting::get_rgb_size().unwrap_or((0, 0)),
                     display_rgb_preview: self.display_rgb_preview,
                 };
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
 
-                if self.dark_mode {
-                    ctx.set_visuals(egui::Visuals::dark());
-                } else {
-                    ctx.set_visuals(egui::Visuals::light());
-                }
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             if ui.button("Clean Logs").on_hover_text("Cleans the logs folder").clicked() {
                 match std::fs::remove_dir_all(paths::logging_path()) {
