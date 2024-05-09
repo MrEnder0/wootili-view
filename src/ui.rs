@@ -1,7 +1,6 @@
 use eframe::egui::{self, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use reqwest::header::{HeaderMap, USER_AGENT};
 use scorched::{log_this, LogData};
 use std::{cmp::Ordering, sync::OnceLock};
 
@@ -89,73 +88,9 @@ pub fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)
     )));
 }
 
-fn get_lastest_ver() -> String {
-    let mut headers = HeaderMap::new();
-    headers.insert(USER_AGENT, "Wootili-View Version Check".parse().unwrap());
-
-    let client = reqwest::blocking::Client::builder()
-        .default_headers(headers)
-        .build()
-        .unwrap();
-
-    let response = match client
-        .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
-        .send()
-    {
-        Ok(response) => response,
-        Err(_) => {
-            log_this(LogData {
-                importance: scorched::LogImportance::Warning,
-                message: "Failed to get lastest version info".to_string(),
-            });
-            return "Unknown".to_string();
-        }
-    };
-
-    let content = match response.text() {
-        Ok(content) => content,
-        Err(_) => {
-            log_this(LogData {
-                importance: scorched::LogImportance::Warning,
-                message: "Unable to read lastest version info".to_string(),
-            });
-            return "Unknown".to_string();
-        }
-    };
-
-    let json = match serde_json::from_str::<serde_json::Value>(&content) {
-        Ok(json) => json,
-        Err(_) => {
-            log_this(LogData {
-                importance: scorched::LogImportance::Warning,
-                message: "Unable to parse version data into json".to_string(),
-            });
-            return "Unknown".to_string();
-        }
-    };
-
-    let tag_name = match json["tag_name"].as_str() {
-        Some(tag_name) => tag_name,
-        None => {
-            log_this(LogData {
-                importance: scorched::LogImportance::Warning,
-                message: "Unable to get version info from json".to_string(),
-            });
-            return "Unknown".to_string();
-        }
-    };
-
-    log_this(LogData {
-        importance: scorched::LogImportance::Info,
-        message: format!("Successfully got lastest version info: {}", tag_name),
-    });
-
-    tag_name.to_string()
-}
-
-static LATEST_VER: OnceLock<String> = OnceLock::new();
-
 pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
+    static LATEST_VER: OnceLock<Option<String>> = OnceLock::new();
+
     ui.horizontal(|ui| {
         ui.hyperlink_to(
             format!("Wootili-View {}", env!("CARGO_PKG_VERSION")),
@@ -169,9 +104,9 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             return;
         }
 
-        let latest_ver = LATEST_VER.get_or_init(get_lastest_ver);
+        let latest_ver = LATEST_VER.get_or_init(call_dynamic_get_lastest_ver);
 
-        if latest_ver == "Unknown" {
+        if latest_ver.is_none() {
             ui.separator();
             ui.label("Failed to check for updates").on_hover_text(
                 "Failed to check for updates, try checking your internet connection",
@@ -182,7 +117,7 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
 
         let version_cmp = match ver_cmp::compare_versions(
             env!("CARGO_PKG_VERSION"),
-            latest_ver,
+            &<std::option::Option<std::string::String> as Clone>::clone(latest_ver).unwrap() as &str,
         ) {
             Ok(version_cmp) => version_cmp,
             Err(_) => {
@@ -198,18 +133,55 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             Ordering::Less => {
                 ui.separator();
                 ui.label("New Version Available").on_hover_ui(|ui| {
-                    ui.label(format!("New version available: {}", latest_ver));
+                    ui.label(format!("New version available: {}", <std::option::Option<std::string::String> as Clone>::clone(latest_ver).unwrap()));
                     ui.hyperlink_to("Download", format!(
                         "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
-                        latest_ver
+                        <std::option::Option<std::string::String> as Clone>::clone(latest_ver).unwrap()
                     ));
                 });
             }
             Ordering::Greater => {
                 ui.separator();
-                ui.label("Developer Build").on_hover_text("You are using a developer build, this may be unstable or have unfinished features");
+                ui.label("Developer Build").on_hover_text("We have detected this build to be unpublished meaning you are using a developer build, this build may be unstable or have unfinished features");
             }
             _ => {}
         }
     });
+}
+
+fn call_dynamic_get_lastest_ver() -> Option<String> {
+    unsafe {
+        let lib = match libloading::Library::new("update_check") {
+            Ok(lib) => lib,
+            Err(_) => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Warning,
+                    message: "Failed to load update_check cdylib".to_string(),
+                });
+                return None;
+            }
+        };
+        let get_lastest_ver: libloading::Symbol<extern "C" fn() -> Option<String>> =
+            match lib.get("get_lastest_ver".as_bytes()) {
+                Ok(func) => func,
+                Err(_) => {
+                    log_this(LogData {
+                        importance: scorched::LogImportance::Error,
+                        message: "Failed to get get_lastest_ver function from cdylib".to_string(),
+                    });
+                    return None;
+                }
+            };
+
+        match get_lastest_ver() {
+            Some(ver) => Some(ver),
+            None => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Warning,
+                    message: "Cdylib failed to get the lastest version".to_string(),
+                });
+                None
+            }
+        }
+    }
 }

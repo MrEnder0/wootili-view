@@ -1,2 +1,5 @@
 /target
+update_check/target
 preview.png
+*.exe
+*.dll

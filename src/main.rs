@@ -256,7 +256,7 @@ impl eframe::App for MyApp {
                     ]),
                     &mut self.toasts,
                 );
-    
+
                 *CAPTURE_SETTINGS.write().unwrap() = CaptureSettings {
                     screen_index: self.screen,
                     downscale_method: self.downscale_method,

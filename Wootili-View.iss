@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wootili-View"
-#define MyAppVersion "0.5.0"
+#define MyAppVersion "0.6.0"
 #define MyAppPublisher "Mr.Ender"
 #define MyAppURL "https://github.com/MrEnder0/wootili-view"
 #define MyAppExeName "Wootili-View.exe"
@@ -31,11 +31,19 @@ WizardStyle=modern
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startonstartup"; Description: "Create a start on system startup shortcut"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Components: baseinstall; Flags: unchecked
+Name: "startonstartup"; Description: "Create a start on system startup shortcut"; GroupDescription: "{cm:AdditionalIcons}"; Components: baseinstall; Flags: unchecked
+
+[Types]
+Name: "custom"; Description: "Custom installation"; Flags: iscustom
+
+[Components]
+Name: "baseinstall"; Description: "Includes necessary base files."; Flags: exclusive
+Name: "baseinstall\updatecheck"; Description: "Adds the ability to check for updates in app. (recommended)"
 
 [Files]
-Source: "target\release\wootili-view.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "target\release\wootili-view.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: baseinstall
+Source: "update_check\target\release\update_check.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: baseinstall\updatecheck
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
