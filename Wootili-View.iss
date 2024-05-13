@@ -43,7 +43,7 @@ Name: "baseinstall\updatecheck"; Description: "Adds the ability to check for upd
 
 [Files]
 Source: "target\release\wootili-view.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: baseinstall
-Source: "update_check\target\release\update_check.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: baseinstall\updatecheck
+Source: "plugins\update_check\target\release\update_check.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: baseinstall\updatecheck
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
