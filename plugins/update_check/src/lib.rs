@@ -1,7 +1,10 @@
 use reqwest::header::{HeaderMap, USER_AGENT};
+use scorched::{log_this, LogData, LogImportance, set_logging_path};
 
 #[no_mangle]
-pub extern "C" fn get_lastest_ver() -> Option<String> {
+pub extern "C" fn get_lastest_ver(log_path: String) -> Option<String> {
+    set_logging_path(log_path.as_str());
+
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, "Wootili-View Version Check".parse().unwrap());
 
@@ -16,30 +19,51 @@ pub extern "C" fn get_lastest_ver() -> Option<String> {
     {
         Ok(response) => response,
         Err(_) => {
-            return None
+            log_this(LogData {
+                importance: LogImportance::Warning,
+                message: "Failed to get lastest version info".to_string(),
+            });
+            return None;
         }
     };
 
     let content = match response.text() {
         Ok(content) => content,
         Err(_) => {
-            return None
+            log_this(LogData {
+                importance: LogImportance::Warning,
+                message: "Unable to read lastest version info".to_string(),
+            });
+            return None;
         }
     };
 
     let json = match serde_json::from_str::<serde_json::Value>(&content) {
         Ok(json) => json,
         Err(_) => {
-            return None
+            log_this(LogData {
+                importance: LogImportance::Warning,
+                message: "Unable to parse version data into json".to_string(),
+            });
+            return None;
         }
     };
 
     let tag_name = match json["tag_name"].as_str() {
         Some(tag_name) => tag_name,
         None => {
-            return None
+            log_this(LogData {
+                importance: LogImportance::Warning,
+                message: "Unable to get version info from json".to_string(),
+            });
+            return None;
         }
     };
+
+    log_this(LogData {
+        importance: LogImportance::Info,
+        message: format!("Successfully got lastest version info: {}", tag_name),
+    });
 
     Some(tag_name.to_string())
 }

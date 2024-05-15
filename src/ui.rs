@@ -4,7 +4,7 @@ use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use scorched::{log_this, LogData};
 use std::{cmp::Ordering, sync::OnceLock};
 
-use crate::{capture::CAPTURE_SETTINGS, save_config_option, wooting, ConfigChange};
+use crate::{capture::CAPTURE_SETTINGS, paths, save_config_option, wooting, ConfigChange};
 
 pub fn downscale_label(
     ui: &mut Ui,
@@ -104,7 +104,11 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             return;
         }
 
-        let latest_ver = LATEST_VER.get_or_init(call_dynamic_get_lastest_ver);
+        let latest_ver = match LATEST_VER.get() {
+            Some(ver) => ver.clone(),
+            None => call_dynamic_get_lastest_ver(format!("{}/", paths::logging_path().as_path().display())),
+        };
+        
 
         if latest_ver.is_none() {
             ui.separator();
@@ -117,7 +121,7 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
 
         let version_cmp = match ver_cmp::compare_versions(
             env!("CARGO_PKG_VERSION"),
-            &<std::option::Option<std::string::String> as Clone>::clone(latest_ver).unwrap() as &str,
+            &<std::option::Option<std::string::String> as Clone>::clone(&latest_ver).unwrap() as &str,
         ) {
             Ok(version_cmp) => version_cmp,
             Err(_) => {
@@ -133,10 +137,10 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             Ordering::Less => {
                 ui.separator();
                 ui.label("New Version Available").on_hover_ui(|ui| {
-                    ui.label(format!("New version available: {}", <std::option::Option<std::string::String> as Clone>::clone(latest_ver).unwrap()));
+                    ui.label(format!("New version available: {}", <std::option::Option<std::string::String> as Clone>::clone(&latest_ver).unwrap()));
                     ui.hyperlink_to("Download", format!(
                         "https://github.com/MrEnder0/wootili-view/releases/tag/{}",
-                        <std::option::Option<std::string::String> as Clone>::clone(latest_ver).unwrap()
+                        <std::option::Option<std::string::String> as Clone>::clone(&latest_ver).unwrap()
                     ));
                 });
             }
@@ -149,7 +153,7 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
     });
 }
 
-fn call_dynamic_get_lastest_ver() -> Option<String> {
+fn call_dynamic_get_lastest_ver(log_path: String) -> Option<String> {
     unsafe {
         let lib = match libloading::Library::new("update_check") {
             Ok(lib) => lib,
@@ -161,7 +165,7 @@ fn call_dynamic_get_lastest_ver() -> Option<String> {
                 return None;
             }
         };
-        let get_lastest_ver: libloading::Symbol<extern "C" fn() -> Option<String>> =
+        let get_lastest_ver: libloading::Symbol<extern "C" fn(String) -> Option<String>> =
             match lib.get("get_lastest_ver".as_bytes()) {
                 Ok(func) => func,
                 Err(_) => {
@@ -173,7 +177,7 @@ fn call_dynamic_get_lastest_ver() -> Option<String> {
                 }
             };
 
-        match get_lastest_ver() {
+        match get_lastest_ver(log_path) {
             Some(ver) => Some(ver),
             None => {
                 log_this(LogData {

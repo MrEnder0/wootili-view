@@ -2953,9 +2953,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "scorched"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed9e68afeda5e901fc5d1199a8dc8a30ed149111379d3291da6063730afb9991"
+checksum = "4bc688781a69bf77133eb976f160f890ed4d299577c20ec42df7705f10c334f4"
 dependencies = [
  "chrono",
 ]
@@ -4255,7 +4255,7 @@ dependencies = [
 
 [[package]]
 name = "wootili-view"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "eframe",
  "egui-notify",
