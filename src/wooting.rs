@@ -1,16 +1,8 @@
-use std::{ffi::CStr, sync::RwLock};
+use std::ffi::CStr;
 
-use image::{DynamicImage, GenericImageView};
-use lazy_static::lazy_static;
+use image::GenericImageView;
 use scorched::{logf, LogData, LogExpect, LogImportance};
 use wooting_rgb_sys as wooting;
-
-lazy_static! {
-    pub static ref SCREEN: RwLock<DynamicImage> = RwLock::new({
-        let img = image::ImageBuffer::new(1, 1);
-        image::DynamicImage::ImageRgba8(img)
-    });
-}
 
 pub fn get_rgb_size() -> Option<(u32, u32)> {
     let model_name = get_device_name();
@@ -122,6 +114,8 @@ pub fn reconnect_device() {
 pub fn exit_rgb() {
     logf!(Info, "Exiting RGB Device");
     unsafe {
+        wooting::wooting_rgb_reset();
+        wooting::wooting_rgb_reset_rgb();
         wooting::wooting_rgb_close();
     }
 }

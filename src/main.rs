@@ -29,7 +29,7 @@ fn main() -> Result<(), eframe::Error> {
 
     CAPTURE_LOCK.store(true, std::sync::atomic::Ordering::Relaxed);
 
-    // Screen thread, captures the screen and stores it in the static SCREEN
+    // Screen thread, captures the screen and sends it to the device
     std::thread::spawn(|| {
         capture();
     });
