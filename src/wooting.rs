@@ -32,6 +32,7 @@ pub fn get_rgb_size() -> Option<(u32, u32)> {
 pub fn get_device_name() -> String {
     unsafe {
         wooting::wooting_usb_disconnect(false);
+        std::thread::sleep(std::time::Duration::from_millis(50));
         wooting::wooting_usb_find_keyboard();
 
         let wooting_usb_meta = *wooting::wooting_usb_get_meta();
@@ -44,7 +45,7 @@ pub fn get_device_name() -> String {
     }
 }
 
-pub fn get_device_creation() -> String {
+pub fn get_device_creation(depth: u8) -> String {
     unsafe {
         wooting::wooting_usb_disconnect(false);
         wooting::wooting_usb_find_keyboard();
@@ -57,7 +58,14 @@ pub fn get_device_creation() -> String {
         let week = buff[8];
 
         if year == 2000 && week == 0 {
-            logf!(Warning, "Failed to get device creation date");
+            logf!(
+                Warning,
+                "Failed to get device creation date retry {}",
+                depth
+            );
+            if depth < 3 {
+                return get_device_creation(depth + 1);
+            }
             "N/A".to_string()
         } else {
             format!("Week {} of {}", week, year)

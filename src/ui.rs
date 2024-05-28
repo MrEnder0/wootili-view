@@ -54,6 +54,7 @@ pub fn display_device_info(
     device_name: &mut String,
     device_creation: &mut String,
     init: &mut bool,
+    frame_rgb_size: (u32, u32),
 ) {
     ui.horizontal(|ui| {
         ui.heading("Device Info");
@@ -64,19 +65,20 @@ pub fn display_device_info(
 
             crate::capture::CAPTURE_LOCK.store(true, std::sync::atomic::Ordering::Relaxed);
             wooting::reconnect_device();
-            std::thread::sleep(std::time::Duration::from_millis(100));
             crate::capture::CAPTURE_LOCK.store(false, std::sync::atomic::Ordering::Relaxed);
 
             *device_name = wooting::get_device_name();
-            *device_creation = wooting::get_device_creation();
+            *device_creation = wooting::get_device_creation(0);
             *init = true;
         }
     });
     ui.add(egui::Label::new(format!("Name: {}", device_name,)));
     ui.label(format!("Creation: {}", device_creation));
+
+    display_lighting_dimensions(ui, frame_rgb_size);
 }
 
-pub fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)) {
+fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)) {
     let lighting_dimensions = if frame_rgb_size.0 == 0 && frame_rgb_size.1 == 0 {
         "Unknown".to_string()
     } else {
@@ -108,7 +110,6 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             Some(ver) => ver.clone(),
             None => call_dynamic_get_lastest_ver(format!("{}/", paths::logging_path().as_path().display())),
         };
-        
 
         if latest_ver.is_none() {
             ui.separator();

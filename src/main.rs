@@ -77,7 +77,7 @@ impl Default for MyApp {
             red_shift_fix: false,
             dark_mode: true,
             check_updates: true,
-            device_creation: wooting::get_device_creation(),
+            device_creation: wooting::get_device_creation(0),
             rgb_size: wooting::get_rgb_size().unwrap(),
             next_frame: Duration::from_secs(0),
         }
@@ -292,13 +292,14 @@ impl eframe::App for MyApp {
                 version_footer(ui, self.check_updates);
             });
 
-            egui::SidePanel::right("lighting_preview_panel").width_range(Rangef::new((self.rgb_size.0 * 15) as f32, (self.rgb_size.0 * 22) as f32)).show(ctx, |ui| {
-                if self.display_rgb_preview {
-                    rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
-                }
-                display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init);
-                display_lighting_dimensions(ui, frame_rgb_size);
-            });
+            if !self.init {
+                egui::SidePanel::right("lighting_preview_panel").width_range(Rangef::new((self.rgb_size.0 * 15) as f32, (self.rgb_size.0 * 22) as f32)).show(ctx, |ui| {
+                    if self.display_rgb_preview {
+                        rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
+                    }
+                    display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init, frame_rgb_size);
+                });
+            }
         });
 
         self.toasts.show(ctx);
