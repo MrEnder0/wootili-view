@@ -6,3 +6,5 @@
 [x] Dark and light mode with ctx.set_visuals(egui::Visuals::dark());
 [x] Create an installer with inno setup
 [ ] Create an icon tray which can be used to hide the window while still running
+[ ] Create a logo/design for the app
+[ ] Create a justfile fpr building the plugins/dylibs
