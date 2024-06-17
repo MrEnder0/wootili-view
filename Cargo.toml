@@ -9,11 +9,11 @@ edition = "2021"
 wooting-rgb-sys = "0.3.2"
 eframe = "0.27.2"
 image = "0.25.1"
-xcap = "0.0.9"
+xcap = "0.0.10"
 egui-notify = "0.14.0"
 lazy_static = "1.4.0"
 scorched = "0.5.3"
-serde = { version = "1.0.201", features = ["derive"] }
+serde = { version = "1.0.203", features = ["derive"] }
 ron = "0.8.1"
 ver-cmp = "0.1.4"
 libloading = "0.8.3"

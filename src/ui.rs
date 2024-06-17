@@ -90,9 +90,9 @@ fn display_lighting_dimensions(ui: &mut egui::Ui, frame_rgb_size: (u32, u32)) {
     )));
 }
 
-pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
-    static LATEST_VER: OnceLock<Option<String>> = OnceLock::new();
+static LATEST_VER: OnceLock<Option<String>> = OnceLock::new();
 
+pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
     ui.horizontal(|ui| {
         ui.hyperlink_to(
             format!("Wootili-View {}", env!("CARGO_PKG_VERSION")),
@@ -108,7 +108,13 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
 
         let latest_ver = match LATEST_VER.get() {
             Some(ver) => ver.clone(),
-            None => call_dynamic_get_lastest_ver(format!("{}/", paths::logging_path().as_path().display())),
+            None => {
+                let ver = call_dynamic_get_lastest_ver(format!("{}/", paths::logging_path().as_path().display()));
+
+                let _ = LATEST_VER.set(ver.clone());
+
+                ver
+            }
         };
 
         if latest_ver.is_none() {
