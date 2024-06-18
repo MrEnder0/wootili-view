@@ -55,6 +55,7 @@ struct MyApp {
     downscale_method: FilterType,
     frame_limit: (u8, u8),
     red_shift_fix: bool,
+    highlight_wasd: bool,
     dark_mode: bool,
     check_updates: bool,
     device_creation: String,
@@ -75,6 +76,7 @@ impl Default for MyApp {
             downscale_method: FilterType::Triangle,
             frame_limit: (60, 15), // (UI, Capture)
             red_shift_fix: false,
+            highlight_wasd: false,
             dark_mode: true,
             check_updates: true,
             device_creation: wooting::get_device_creation(0),
@@ -126,6 +128,7 @@ impl eframe::App for MyApp {
             self.downscale_method = downscale_index_to_filter(config.downscale_method_index);
             self.frame_limit = config.frame_limit;
             self.red_shift_fix = config.red_shift_fix;
+            self.highlight_wasd = config.highlight_wasd;
             self.dark_mode = config.dark_mode;
             self.check_updates = config.check_updates;
 
@@ -135,6 +138,7 @@ impl eframe::App for MyApp {
                 capture_frame_limit: self.frame_limit.1.into(),
                 reduce_bright_effects: self.reduce_bright_effects,
                 red_shift_fix: self.red_shift_fix,
+                highlight_wasd: self.highlight_wasd,
                 brightness: self.brightness,
                 device_name: self.device_name.clone(),
                 rgb_size: wooting::get_rgb_size().unwrap_or((0, 0)),
@@ -176,6 +180,11 @@ impl eframe::App for MyApp {
             if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() {
                 save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
+                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            if ui.checkbox(&mut self.highlight_wasd, "Highlight WASD").on_hover_text("Highlights the WASD keys to be able to see easily while gaming").changed() {
+                save_config_option(ConfigChange::HighlightWASD(self.highlight_wasd), &mut self.toasts);
+                CAPTURE_SETTINGS.write().unwrap().highlight_wasd = self.highlight_wasd;
                 CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
             ui.menu_button("Downscale Method", |ui| {
@@ -233,6 +242,7 @@ impl eframe::App for MyApp {
                 self.downscale_method = downscale_index_to_filter(new_config.downscale_method_index);
                 self.frame_limit = new_config.frame_limit;
                 self.red_shift_fix = new_config.red_shift_fix;
+                self.highlight_wasd = new_config.highlight_wasd;
                 self.dark_mode = new_config.dark_mode;
                 self.check_updates = new_config.check_updates;
 
@@ -251,6 +261,7 @@ impl eframe::App for MyApp {
                         ConfigChange::DownscaleMethod(self.downscale_method),
                         ConfigChange::FrameLimit(self.frame_limit),
                         ConfigChange::RedShiftFix(self.red_shift_fix),
+                        ConfigChange::HighlightWASD(self.highlight_wasd),
                         ConfigChange::Darkmode(self.dark_mode),
                         ConfigChange::CheckUpdates(self.check_updates),
                     ]),
@@ -263,6 +274,7 @@ impl eframe::App for MyApp {
                     capture_frame_limit: self.frame_limit.1.into(),
                     reduce_bright_effects: self.reduce_bright_effects,
                     red_shift_fix: self.red_shift_fix,
+                    highlight_wasd: self.highlight_wasd,
                     brightness: self.brightness,
                     device_name: self.device_name.clone(),
                     rgb_size: wooting::get_rgb_size().unwrap_or((0, 0)),
@@ -320,6 +332,7 @@ impl eframe::App for MyApp {
                 ConfigChange::DownscaleMethod(self.downscale_method),
                 ConfigChange::FrameLimit(self.frame_limit),
                 ConfigChange::RedShiftFix(self.red_shift_fix),
+                ConfigChange::HighlightWASD(self.highlight_wasd),
                 ConfigChange::Darkmode(self.dark_mode),
                 ConfigChange::CheckUpdates(self.check_updates),
             ]),
