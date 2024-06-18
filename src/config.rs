@@ -19,11 +19,12 @@ pub struct Config {
     pub downscale_method_index: u8,
     pub frame_limit: (u8, u8),
     pub red_shift_fix: bool,
+    pub highlight_wasd: bool,
     pub dark_mode: bool,
     pub check_updates: bool,
 }
 
-pub static CONFIG_VERSION: u8 = 2;
+pub static CONFIG_VERSION: u8 = 3;
 
 pub fn read_config() -> Option<Config> {
     let config_file = File::open(crate::paths::config_path().join("config.ron"))
@@ -68,6 +69,7 @@ pub fn gen_config() {
         downscale_method_index: 1,
         frame_limit: (60, 15), // (UI, Capture)
         red_shift_fix: false,
+        highlight_wasd: false,
         dark_mode: true,
         check_updates: true,
     };
@@ -107,6 +109,7 @@ pub enum ConfigChange {
     DownscaleMethod(FilterType),
     FrameLimit((u8, u8)),
     RedShiftFix(bool),
+    HighlightWASD(bool),
     Darkmode(bool),
     CheckUpdates(bool),
 }
@@ -147,6 +150,7 @@ pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
         }
         ConfigChange::FrameLimit(x) => data.frame_limit = x,
         ConfigChange::RedShiftFix(x) => data.red_shift_fix = x,
+        ConfigChange::HighlightWASD(x) => data.highlight_wasd = x,
         ConfigChange::Darkmode(x) => data.dark_mode = x,
         ConfigChange::CheckUpdates(x) => data.check_updates = x,
     }

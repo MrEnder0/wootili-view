@@ -77,11 +77,24 @@ pub fn draw_rgb(
     resized_capture: image::DynamicImage,
     brightness: u8,
     red_shift_fix: bool,
+    highlight_wasd: bool,
     model_name: String,
 ) {
     unsafe {
         for (x, y, pixel) in resized_capture.pixels() {
             let image::Rgba([r, g, b, _]) = pixel;
+
+            // When highlight WASD is enabled, the WASD keys are set to red
+            if highlight_wasd
+                && ((x == 2 && y == 1)
+                    || (x == 1 && y == 2)
+                    || (x == 2 && y == 2)
+                    || (x == 3 && y == 2))
+            {
+                wooting::wooting_rgb_array_set_single(y as u8 + 1, x as u8, 255, 0, 0);
+                continue;
+            }
+
             // On 60HE models, the spacebar area is skipped for redshift fix due to the rgb lights not being covered by the keyswitches
             if model_name == "Wooting 60HE"
                 || model_name == "Wooting 60HE (ARM)" && y == 4 && x > 3 && x < 10

@@ -17,6 +17,7 @@ pub struct CaptureSettings {
     pub capture_frame_limit: u32,
     pub reduce_bright_effects: bool,
     pub red_shift_fix: bool,
+    pub highlight_wasd: bool,
     pub brightness: u8,
     pub device_name: String,
     pub rgb_size: (u32, u32),
@@ -29,6 +30,7 @@ pub static CAPTURE_SETTINGS: RwLock<CaptureSettings> = RwLock::new(CaptureSettin
     downscale_method: FilterType::Triangle,
     reduce_bright_effects: false,
     red_shift_fix: false,
+    highlight_wasd: false,
     brightness: 100,
     capture_frame_limit: 10,
     device_name: String::new(),
@@ -49,6 +51,7 @@ pub fn capture() {
         downscale_method: FilterType::Triangle,
         reduce_bright_effects: false,
         red_shift_fix: false,
+        highlight_wasd: false,
         brightness: 100,
         capture_frame_limit: 10,
         device_name: wooting::get_device_name(),
@@ -127,6 +130,7 @@ pub fn capture() {
                 resized_capture.clone(),
                 current_settings.brightness,
                 current_settings.red_shift_fix,
+                current_settings.highlight_wasd,
                 current_settings.device_name.clone(),
             );
 
