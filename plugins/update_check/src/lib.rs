@@ -1,5 +1,5 @@
 use reqwest::header::{HeaderMap, USER_AGENT};
-use scorched::{log_this, LogData, LogImportance, set_logging_path};
+use scorched::{log_this, set_logging_path, LogData, LogImportance};
 
 #[no_mangle]
 pub extern "C" fn get_lastest_ver(log_path: String) -> Option<String> {
