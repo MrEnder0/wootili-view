@@ -85,11 +85,7 @@ pub fn draw_rgb(
             let image::Rgba([r, g, b, _]) = pixel;
 
             // When highlight WASD is enabled, the WASD keys are set to red
-            if highlight_wasd
-                && ((x == 2 && y == 1)
-                    || (x == 1 && y == 2)
-                    || (x == 2 && y == 2)
-                    || (x == 3 && y == 2))
+            if !(!highlight_wasd || x != 2 && y != 2 || y != 1 && y != 2 || x != 2 && x != 1 && x != 3)
             {
                 wooting::wooting_rgb_array_set_single(y as u8 + 1, x as u8, 255, 0, 0);
                 continue;
