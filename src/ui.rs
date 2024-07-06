@@ -53,6 +53,7 @@ pub fn display_device_info(
     toasts: &mut Toasts,
     device_name: &mut String,
     device_creation: &mut String,
+    device_version: &mut String,
     init: &mut bool,
     frame_rgb_size: (u32, u32),
 ) {
@@ -74,6 +75,7 @@ pub fn display_device_info(
     });
     ui.add(egui::Label::new(format!("Name: {}", device_name,)));
     ui.label(format!("Creation: {}", device_creation));
+    ui.label(format!("Firmware Version: {}", device_version));
 
     display_lighting_dimensions(ui, frame_rgb_size);
 }

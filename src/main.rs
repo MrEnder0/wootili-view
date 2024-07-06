@@ -59,6 +59,7 @@ struct MyApp {
     dark_mode: bool,
     check_updates: bool,
     device_creation: String,
+    device_version: String,
     rgb_size: (u32, u32),
     next_frame: Duration,
 }
@@ -80,6 +81,7 @@ impl Default for MyApp {
             dark_mode: true,
             check_updates: true,
             device_creation: wooting::get_device_creation(0),
+            device_version: wooting::get_device_version(),
             rgb_size: wooting::get_rgb_size().unwrap(),
             next_frame: Duration::from_secs(0),
         }
@@ -309,7 +311,7 @@ impl eframe::App for MyApp {
                     if self.display_rgb_preview {
                         rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
                     }
-                    display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.init, frame_rgb_size);
+                    display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.device_version, &mut self.init, frame_rgb_size);
                 });
             }
         });

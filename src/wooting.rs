@@ -48,6 +48,7 @@ pub fn get_device_name() -> String {
 pub fn get_device_creation(depth: u8) -> String {
     unsafe {
         wooting::wooting_usb_disconnect(false);
+        std::thread::sleep(std::time::Duration::from_millis(50));
         wooting::wooting_usb_find_keyboard();
 
         let len = u8::MAX as usize + 3;
@@ -70,6 +71,24 @@ pub fn get_device_creation(depth: u8) -> String {
         } else {
             format!("Week {} of {}", week, year)
         }
+    }
+}
+
+pub fn get_device_version() -> String {
+    unsafe {
+        wooting::wooting_usb_disconnect(false);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        wooting::wooting_usb_find_keyboard();
+
+        let len = u8::MAX as usize + 3;
+        let mut buff = vec![0u8; len];
+        wooting::wooting_usb_send_feature_with_response(buff.as_mut_ptr(), len, 1, 0, 0, 0, 0);
+
+        let major = buff[5];
+        let minor = buff[6];
+        let patch = buff[7];
+
+        format!("{}.{}.{}", major, minor, patch)
     }
 }
 
