@@ -2,6 +2,7 @@ use std::ffi::CStr;
 
 use image::GenericImageView;
 use scorched::{logf, LogData, LogExpect, LogImportance};
+use ver_cmp::compare_versions;
 use wooting_rgb_sys as wooting;
 
 pub fn get_rgb_size() -> Option<(u32, u32)> {
@@ -74,7 +75,7 @@ pub fn get_device_creation(depth: u8) -> String {
     }
 }
 
-pub fn get_device_version() -> String {
+pub fn get_device_version() -> (String, bool) {
     unsafe {
         wooting::wooting_usb_disconnect(false);
         std::thread::sleep(std::time::Duration::from_millis(50));
@@ -88,7 +89,15 @@ pub fn get_device_version() -> String {
         let minor = buff[6];
         let patch = buff[7];
 
-        format!("{}.{}.{}", major, minor, patch)
+        let firmware_version = format!("{}.{}.{}", major, minor, patch);
+
+        if let Ok(result) = compare_versions(&firmware_version, "2.8.0") {
+            if result == std::cmp::Ordering::Greater {
+                return (firmware_version, true);
+            }
+        }
+
+        (firmware_version, false)
     }
 }
 
@@ -104,7 +113,10 @@ pub fn draw_rgb(
             let image::Rgba([r, g, b, _]) = pixel;
 
             // When highlight WASD is enabled, the WASD keys are set to red
-            if !(!highlight_wasd || x != 2 && y != 2 || y != 1 && y != 2 || x != 2 && x != 1 && x != 3)
+            if !(!highlight_wasd
+                || x != 2 && y != 2
+                || y != 1 && y != 2
+                || x != 2 && x != 1 && x != 3)
             {
                 wooting::wooting_rgb_array_set_single(y as u8 + 1, x as u8, 255, 0, 0);
                 continue;

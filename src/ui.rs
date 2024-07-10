@@ -53,7 +53,7 @@ pub fn display_device_info(
     toasts: &mut Toasts,
     device_name: &mut String,
     device_creation: &mut String,
-    device_version: &mut String,
+    device_version: &mut (String, bool),
     init: &mut bool,
     frame_rgb_size: (u32, u32),
 ) {
@@ -75,7 +75,12 @@ pub fn display_device_info(
     });
     ui.add(egui::Label::new(format!("Name: {}", device_name,)));
     ui.label(format!("Creation: {}", device_creation));
-    ui.label(format!("Firmware Version: {}", device_version));
+    ui.horizontal(|ui| {
+        ui.label(format!("Firmware Version: {}", device_version.0));
+        if device_version.1 {
+            ui.label(" (Unsupported)").highlight().on_hover_text("This firmware version is unsupported, please downgrade to a supported version for the time being (<=2.8.0)");
+        }
+    });
 
     display_lighting_dimensions(ui, frame_rgb_size);
 }

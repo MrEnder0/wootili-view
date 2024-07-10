@@ -59,7 +59,7 @@ struct MyApp {
     dark_mode: bool,
     check_updates: bool,
     device_creation: String,
-    device_version: String,
+    device_version: (String, bool),
     rgb_size: (u32, u32),
     next_frame: Duration,
 }
