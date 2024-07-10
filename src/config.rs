@@ -102,6 +102,7 @@ pub fn config_exists() -> bool {
 
 pub enum ConfigChange {
     MultipleConfigOptions(Vec<ConfigChange>),
+    AllConfigOptions(Config),
     Brightness(u8),
     ReduceBrightEffects(bool),
     Screen(usize),
@@ -141,6 +142,7 @@ pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
                 save_config_option(change, toasts);
             }
         }
+        ConfigChange::AllConfigOptions(x) => data = x,
         ConfigChange::Brightness(x) => data.brightness = x,
         ConfigChange::ReduceBrightEffects(x) => data.reduce_bright_effects = x,
         ConfigChange::Screen(x) => data.screen = x,

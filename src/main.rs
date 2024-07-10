@@ -229,7 +229,8 @@ impl eframe::App for MyApp {
             if ui.checkbox(&mut self.check_updates, "Check for Updates").on_hover_text("Checks for updates on startup, wont apply to current session").changed() {
                 save_config_option(ConfigChange::CheckUpdates(self.check_updates), &mut self.toasts);
             }
-            if ui.button("Reset Config").on_hover_text("Resets the config to the default values").clicked() {
+
+            if ui.button("Reset Config").on_hover_text("Warning: Resets the config to the default values").clicked() {
                 reset_config();
                 self.toasts
                     .info("Config file has been reset")
@@ -255,18 +256,7 @@ impl eframe::App for MyApp {
                 }
 
                 save_config_option(
-                    ConfigChange::MultipleConfigOptions(vec![
-                        ConfigChange::Brightness(self.brightness),
-                        ConfigChange::ReduceBrightEffects(self.reduce_bright_effects),
-                        ConfigChange::Screen(self.screen),
-                        ConfigChange::DisplayRgbPreview(self.display_rgb_preview),
-                        ConfigChange::DownscaleMethod(self.downscale_method),
-                        ConfigChange::FrameLimit(self.frame_limit),
-                        ConfigChange::RedShiftFix(self.red_shift_fix),
-                        ConfigChange::HighlightWASD(self.highlight_wasd),
-                        ConfigChange::Darkmode(self.dark_mode),
-                        ConfigChange::CheckUpdates(self.check_updates),
-                    ]),
+                    ConfigChange::AllConfigOptions(new_config),
                     &mut self.toasts,
                 );
 
@@ -285,22 +275,8 @@ impl eframe::App for MyApp {
 
                 CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
             }
-            if ui.button("Clean Logs").on_hover_text("Cleans the logs folder").clicked() {
-                match std::fs::remove_dir_all(paths::logging_path()) {
-                    Ok(_) => {
-                        logf!(Info, "Logs folder has been cleaned");
-                        self.toasts
-                            .info("Logs folder has been cleaned")
-                            .set_duration(Some(Duration::from_secs(3)));
-                    }
-                    Err(e) => {
-                        logf!(Error, "Failed to clean logs folder: {}", e);
-                        self.toasts
-                            .error(format!("Failed to clean logs folder: {}", e))
-                            .set_duration(Some(Duration::from_secs(5)));
-                    }
-                }
-            }
+            
+            clean_logs_button(ui, &mut self.toasts);
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
                 version_footer(ui, self.check_updates);

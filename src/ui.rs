@@ -1,8 +1,8 @@
 use eframe::egui::{self, SelectableLabel, Ui};
 use egui_notify::Toasts;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use scorched::{log_this, LogData};
-use std::{cmp::Ordering, sync::OnceLock};
+use scorched::{log_this, logf, LogData, LogImportance};
+use std::{cmp::Ordering, sync::OnceLock, time::Duration};
 
 use crate::{capture::CAPTURE_SETTINGS, paths, save_config_option, wooting, ConfigChange};
 
@@ -23,6 +23,28 @@ pub fn downscale_label(
         CAPTURE_SETTINGS.write().unwrap().downscale_method = new;
         crate::capture::CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
         *current = new;
+    }
+}
+
+pub fn clean_logs_button(ui: &mut Ui, toasts: &mut Toasts) {
+    if ui.button("Clean Logs").on_hover_text("Cleans the logs folder").clicked() {
+        match std::fs::remove_dir_all(paths::logging_path()) {
+            Ok(_) => {
+                log_this(LogData {
+                    importance: scorched::LogImportance::Info,
+                    message: "Logs folder has been cleaned".to_string(),
+                });
+                toasts
+                    .info("Logs folder has been cleaned")
+                    .set_duration(Some(Duration::from_secs(3)));
+            }
+            Err(e) => {
+                logf!(Error, "Failed to clean logs folder: {}", e);
+                toasts
+                    .error(format!("Failed to clean logs folder: {}", e))
+                    .set_duration(Some(Duration::from_secs(5)));
+            }
+        }
     }
 }
 
