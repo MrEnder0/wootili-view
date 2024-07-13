@@ -1,10 +1,25 @@
 use reqwest::header::{HeaderMap, USER_AGENT};
-use scorched::{log_this, set_logging_path, LogData, LogImportance};
+use scorched::{logf, set_logging_path, LogData, LogImportance};
 
 #[no_mangle]
 pub extern "C" fn get_lastest_ver(log_path: String) -> Option<String> {
     set_logging_path(log_path.as_str());
 
+    match get_version_info() {
+        Ok(version) => {
+            logf!(Info, "Successfully got lastest version info: {}", version);
+
+            Some(version)
+        }
+        Err(err) => {
+            logf!(Error, "Failed to get latest version info because of the following error: {}", err);
+
+            None
+        }
+    }
+}
+
+fn get_version_info() -> Result<String, Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, "Wootili-View Version Check".parse().unwrap());
 
@@ -13,57 +28,15 @@ pub extern "C" fn get_lastest_ver(log_path: String) -> Option<String> {
         .build()
         .unwrap();
 
-    let response = match client
+    let content = client
         .get("https://api.github.com/repos/MrEnder0/Wootili-view/releases/latest")
-        .send()
-    {
-        Ok(response) => response,
-        Err(_) => {
-            log_this(LogData {
-                importance: LogImportance::Warning,
-                message: "Failed to get lastest version info".to_string(),
-            });
-            return None;
-        }
-    };
+        .send()?
+        .text()?;
 
-    let content = match response.text() {
-        Ok(content) => content,
-        Err(_) => {
-            log_this(LogData {
-                importance: LogImportance::Warning,
-                message: "Unable to read lastest version info".to_string(),
-            });
-            return None;
-        }
-    };
+    let json = serde_json::from_str::<serde_json::Value>(&content)?;
 
-    let json = match serde_json::from_str::<serde_json::Value>(&content) {
-        Ok(json) => json,
-        Err(_) => {
-            log_this(LogData {
-                importance: LogImportance::Warning,
-                message: "Unable to parse version data into json".to_string(),
-            });
-            return None;
-        }
-    };
-
-    let tag_name = match json["tag_name"].as_str() {
-        Some(tag_name) => tag_name,
-        None => {
-            log_this(LogData {
-                importance: LogImportance::Warning,
-                message: "Unable to get version info from json".to_string(),
-            });
-            return None;
-        }
-    };
-
-    log_this(LogData {
-        importance: LogImportance::Info,
-        message: format!("Successfully got lastest version info: {}", tag_name),
-    });
-
-    Some(tag_name.to_string())
+    match json["tag_name"].as_str() {
+        Some(tag_name) => Ok(tag_name.to_string()),
+        None => Err("Failed to get tag_name".into()),
+    }
 }
