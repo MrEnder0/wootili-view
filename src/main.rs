@@ -40,7 +40,7 @@ fn main() -> Result<(), eframe::Error> {
             centered: true,
             ..Default::default()
         },
-        Box::new(move |_cc| Box::<MyApp>::default()),
+        Box::new(move |_cc| Ok(Box::<MyApp>::default())),
     )
 }
 
