@@ -2,7 +2,7 @@
 ; Modifications by Mr.Ender
 
 #define MyAppName "Wootili-View"
-#define MyAppVersion "0.6.8"
+#define MyAppVersion "0.7.0"
 #define MyAppPublisher "Mr.Ender"
 #define MyAppURL "https://github.com/MrEnder0/wootili-view"
 #define MyAppExeName "Wootili-View.exe"
@@ -31,15 +31,16 @@ WizardStyle=modern
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
+Name: "githubicon"; Description: "Create a shortcut to the project Github repository (recommended)"; GroupDescription: "{cm:AdditionalIcons}"; Components: baseinstall
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Components: baseinstall; Flags: unchecked
-Name: "startonstartup"; Description: "Create a start on system startup shortcut"; GroupDescription: "{cm:AdditionalIcons}"; Components: baseinstall; Flags: unchecked
+Name: "startonstartup"; Description: "Create a system startup shortcut"; GroupDescription: "{cm:AdditionalIcons}"; Components: baseinstall; Flags: unchecked
 
 [Types]
 Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
-Name: "baseinstall"; Description: "Includes necessary base files."; Flags: exclusive
-Name: "baseinstall\updatecheck"; Description: "Adds the ability to check for updates in app. (recommended)"
+Name: "baseinstall"; Description: "Includes necessary base files"; Flags: exclusive
+Name: "baseinstall\updatecheck"; Description: "Lastest version info checker (recommended)"
 
 [Files]
 Source: "wootili-view.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: baseinstall
@@ -47,7 +48,9 @@ Source: "update_check.dll"; DestDir: "{app}"; Flags: ignoreversion; Components: 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autoprograms}\{#MyAppName}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autoprograms}\{#MyAppName}\{#MyAppName} Github"; Filename: "{#MyAppURL}"; Tasks: githubicon
+
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 Name: "{commonstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startonstartup;
 
