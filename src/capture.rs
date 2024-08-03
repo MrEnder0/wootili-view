@@ -5,7 +5,6 @@ use std::{
 
 use crate::wooting;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use lazy_static::lazy_static;
 use scorched::{LogExpect, LogImportance};
 use std::sync::atomic::Ordering;
 use xcap::Monitor;
@@ -38,12 +37,18 @@ pub static CAPTURE_SETTINGS: RwLock<CaptureSettings> = RwLock::new(CaptureSettin
     display_rgb_preview: false,
 });
 pub static CAPTURE_LOCK: AtomicBool = AtomicBool::new(false);
-lazy_static! {
-    pub static ref CAPTURE_PREVIEW: RwLock<DynamicImage> = RwLock::new({
-        let img = image::ImageBuffer::new(1, 1);
-        image::DynamicImage::ImageRgba8(img)
-    });
-}
+pub static CAPTURE_PREVIEW: RwLock<Option<DynamicImage>> = RwLock::new(None);
+//pub static CAPTURE_PREVIEW: LazyLock<DynamicImage> = LazyLock::new(|| {
+//    let img = image::ImageBuffer::new(1, 1);
+//    image::DynamicImage::ImageRgba8(img)
+//});
+
+//lazy_static! {
+//    pub static ref CAPTURE_PREVIEW: RwLock<DynamicImage> = RwLock::new({
+//        let img = image::ImageBuffer::new(1, 1);
+//        image::DynamicImage::ImageRgba8(img)
+//    });
+//}
 
 pub fn capture() {
     let mut current_settings = CaptureSettings {
@@ -60,6 +65,8 @@ pub fn capture() {
     };
     let mut last_frame = DynamicImage::new_rgba8(1, 1);
     let mut next_frame: Duration;
+
+    CAPTURE_PREVIEW.write().unwrap().replace(DynamicImage::new_rgba8(1, 1));
 
     loop {
         if CAPTURE_LOCK.load(Ordering::Relaxed) {
@@ -105,7 +112,8 @@ pub fn capture() {
         );
 
         if current_settings.display_rgb_preview {
-            *CAPTURE_PREVIEW.write().unwrap() = rgb_screen.clone();
+            CAPTURE_PREVIEW.write().unwrap().replace(rgb_screen.clone());
+            //*CAPTURE_PREVIEW.write().unwrap() = rgb_screen.clone();
         }
 
         let frame_rgb_size: (u32, u32) = current_settings.rgb_size;

@@ -285,7 +285,15 @@ impl eframe::App for MyApp {
             if !self.init {
                 egui::SidePanel::right("lighting_preview_panel").width_range(Rangef::new((self.rgb_size.0 * 15) as f32, (self.rgb_size.0 * 22) as f32)).show(ctx, |ui| {
                     if self.display_rgb_preview {
-                        rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
+                        match CAPTURE_PREVIEW.read().unwrap().clone() {
+                            Some(preview) => {
+                                rgb_preview(ui, frame_rgb_size, preview.clone());
+                            }
+                            None => {
+                                ui.heading("No Preview Available");
+                            }
+                        }
+                        //rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
                     }
                     display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.device_version, &mut self.init, frame_rgb_size);
                 });
