@@ -75,7 +75,7 @@ pub fn get_device_creation(depth: u8) -> String {
     }
 }
 
-pub fn get_device_version() -> (String, bool) {
+pub fn get_device_version() -> String {
     unsafe {
         wooting::wooting_usb_disconnect(false);
         std::thread::sleep(std::time::Duration::from_millis(50));
@@ -91,6 +91,7 @@ pub fn get_device_version() -> (String, bool) {
 
         let firmware_version = format!("{}.{}.{}", major, minor, patch);
 
+        /*
         if let Ok(result) = compare_versions(&firmware_version, "2.8.0") {
             if result == std::cmp::Ordering::Greater {
                 return (firmware_version, true);
@@ -98,6 +99,9 @@ pub fn get_device_version() -> (String, bool) {
         }
 
         (firmware_version, false)
+        */
+
+        firmware_version
     }
 }
 
