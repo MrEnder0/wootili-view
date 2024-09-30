@@ -184,7 +184,7 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             }
             Ordering::Greater => {
                 ui.separator();
-                ui.label("Developer Build").on_hover_text("We have detected this build to be unpublished meaning you are using a developer build, this build may be unstable or have unfinished features");
+                ui.label("Developer Build").highlight().on_hover_text("This build has been detected as unpublished meaning this is most likley a developer build or a pulled release, this build may be unstable or have unfinished/broken features");
             }
             _ => {}
         }
