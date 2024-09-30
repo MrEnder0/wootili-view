@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wooting-rgb-sys = "0.3.3"
+wooting-rgb-sys = "0.3.4"
 eframe = "0.28.1"
 image = "0.25.2"
 xcap = "0.0.13"
