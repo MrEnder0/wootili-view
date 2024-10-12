@@ -127,7 +127,7 @@ pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
 
             toasts
                 .warning("Config file has been reset due to a config format error")
-                .set_duration(Some(std::time::Duration::from_secs(5)));
+                .duration(Some(std::time::Duration::from_secs(5)));
 
             read_config().log_expect(
                 LogImportance::Error,

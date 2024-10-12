@@ -66,7 +66,10 @@ pub fn capture() {
     let mut last_frame = DynamicImage::new_rgba8(1, 1);
     let mut next_frame: Duration;
 
-    CAPTURE_PREVIEW.write().unwrap().replace(DynamicImage::new_rgba8(1, 1));
+    CAPTURE_PREVIEW
+        .write()
+        .unwrap()
+        .replace(DynamicImage::new_rgba8(1, 1));
 
     loop {
         if CAPTURE_LOCK.load(Ordering::Relaxed) {

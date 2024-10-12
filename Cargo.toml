@@ -1,16 +1,16 @@
 [package]
 name = "wootili-view"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 wooting-rgb-sys = "0.3.4"
-eframe = "0.28.1"
+eframe = "0.29.1"
 image = "0.25.2"
-xcap = "0.0.13"
-egui-notify = "0.15.0"
+xcap = "0.0.14"
+egui-notify = "0.16.0"
 scorched = "0.5.3"
 serde = { version = "1.0.210", features = ["derive"] }
 ron = "0.8.1"

@@ -12,7 +12,7 @@ use eframe::{egui, emath::Rangef};
 use egui_notify::Toasts;
 use image::imageops::FilterType;
 use scorched::{logf, LogData, LogImportance};
-use std::time::Duration;
+use std::{sync::atomic::Ordering, time::Duration};
 use ui::*;
 use xcap::Monitor;
 
@@ -27,7 +27,7 @@ fn main() -> Result<(), eframe::Error> {
 
     wooting::update_rgb();
 
-    CAPTURE_LOCK.store(true, std::sync::atomic::Ordering::Relaxed);
+    CAPTURE_LOCK.store(true, Ordering::Relaxed);
 
     // Screen thread, captures the screen and sends it to the device
     std::thread::spawn(|| {
@@ -94,19 +94,19 @@ impl eframe::App for MyApp {
             if !cfg!(windows) {
                 self.toasts
                     .error("This application is not supported on your operating system")
-                    .set_duration(Some(Duration::from_secs(120)));
+                    .duration(Some(Duration::from_secs(120)));
             }
             logf!(Info, "Connected to device Name: {}", self.device_name);
             match self.device_name.as_str() {
                 "N/A" => {
                     self.toasts
                         .error("No Wooting Device Found")
-                        .set_duration(Some(Duration::from_secs(5)));
+                        .duration(Some(Duration::from_secs(5)));
                 }
                 _ => {
                     self.toasts
                         .success(format!("Connected to {}", self.device_name))
-                        .set_duration(Some(Duration::from_secs(3)));
+                        .duration(Some(Duration::from_secs(3)));
                 }
             };
 
@@ -117,7 +117,7 @@ impl eframe::App for MyApp {
 
                     self.toasts
                         .warning("Config file has been reset due to a config format error")
-                        .set_duration(Some(Duration::from_secs(5)));
+                        .duration(Some(Duration::from_secs(5)));
 
                     read_config().unwrap()
                 }
@@ -147,8 +147,8 @@ impl eframe::App for MyApp {
                 display_rgb_preview: self.display_rgb_preview,
             };
 
-            CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
-            CAPTURE_LOCK.store(false, std::sync::atomic::Ordering::Relaxed);
+            CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
+            CAPTURE_LOCK.store(false, Ordering::Relaxed);
 
             if self.dark_mode {
                 ctx.set_visuals(egui::Visuals::dark());
@@ -167,27 +167,27 @@ impl eframe::App for MyApp {
             if ui.add(egui::Slider::new(&mut self.brightness, 50..=150).text("Brightness")).on_hover_text("Adjusts the brightness of the lighting").changed() {
                 save_config_option(ConfigChange::Brightness(self.brightness), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().brightness = self.brightness;
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
             if ui.add(egui::Slider::new(&mut self.screen, 0..=Monitor::all().unwrap().len() - 1).text("Screen")).on_hover_text("Select the screen to capture").changed() {
                 save_config_option(ConfigChange::Screen(self.screen), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().screen_index = self.screen;
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
             if ui.checkbox(&mut self.reduce_bright_effects, "Reduce Bright Effects").on_hover_text("Reduces brightness when the screen is very bright").changed() {
                 save_config_option(ConfigChange::ReduceBrightEffects(self.reduce_bright_effects), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().reduce_bright_effects = self.reduce_bright_effects;
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
             if ui.checkbox(&mut self.red_shift_fix, "Red Shift Fix").on_hover_text("Fixes the red shift/hue issue on some Wooting keyboards due to the stock keycaps or from custom switches like the Geon Raptor HE").changed() {
                 save_config_option(ConfigChange::RedShiftFix(self.red_shift_fix), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().red_shift_fix = self.red_shift_fix;
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
             if ui.checkbox(&mut self.highlight_wasd, "Highlight WASD").on_hover_text("Highlights the WASD keys to be able to see easily while gaming").changed() {
                 save_config_option(ConfigChange::HighlightWASD(self.highlight_wasd), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().highlight_wasd = self.highlight_wasd;
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
             ui.menu_button("Downscale Method", |ui| {
                 downscale_label(ui, &mut self.downscale_method, FilterType::Nearest, "Nearest", "Fast and picks on up on small details but is inconsistent, can completly mask elements on screen", &mut self.toasts);
@@ -201,13 +201,13 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Performance");
-            if ui.add(egui::Slider::new(&mut self.frame_limit.0, 25..=144).text("UI FPS Cap")).on_hover_text("Limits the FPS of the UI, this will not effect the responsivness of your device's rgb but can help overall system performance").changed() {
+            if ui.add(egui::Slider::new(&mut self.frame_limit.0, 25..=144).text("UI FPS Cap")).on_hover_text("Limits the FPS of the UI, this will not effect the responsivness of your device's RGB but can help overall system performance").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
             }
-            if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("Screen capture FPS Cap")).on_hover_text("Limits the FPS of the screen capture for rendering on the device, note it is likely that having this number super large will not result at the desired fps due to the speed of the rgb lights on the device").changed() {
+            if ui.add(egui::Slider::new(&mut self.frame_limit.1, 1..=60).text("RGB FPS Cap")).on_hover_text("Limits the FPS of the RGB for rendering on the device, note it is likely that having this number super large will not result at the desired FPS due to the speed of the RGB lights on the device").changed() {
                 save_config_option(ConfigChange::FrameLimit(self.frame_limit), &mut self.toasts);
                 CAPTURE_SETTINGS.write().unwrap().capture_frame_limit = self.frame_limit.1.into();
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
 
             let frame_rgb_size = self.rgb_size;
@@ -236,7 +236,7 @@ impl eframe::App for MyApp {
                 reset_config();
                 self.toasts
                     .info("Config file has been reset")
-                    .set_duration(Some(Duration::from_secs(1)));
+                    .duration(Some(Duration::from_secs(1)));
 
                 let new_config = read_config().unwrap();
 
@@ -275,9 +275,9 @@ impl eframe::App for MyApp {
                     display_rgb_preview: self.display_rgb_preview,
                 };
 
-                CAPTURE_SETTINGS_RELOAD.store(true, std::sync::atomic::Ordering::Relaxed);
+                CAPTURE_SETTINGS_RELOAD.store(true, Ordering::Relaxed);
             }
-            
+
             clean_logs_button(ui, &mut self.toasts);
 
             egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
