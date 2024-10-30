@@ -192,7 +192,7 @@ pub fn version_footer(ui: &mut egui::Ui, check_for_updates: bool) {
             }
             cmp::Greater => {
                 ui.separator();
-                ui.label("Developer Build").highlight().on_hover_text("This build has been detected as unpublished meaning this is most likley a developer build or a pulled release, this build may be unstable or have unfinished/broken features");
+                ui.label("Developer Build").highlight().on_hover_text("This build has been detected as unpublished meaning this is most likely a developer build or a pulled release; this build may be unstable or have unfinished/broken features.");
             }
             _ => {}
         }
@@ -206,7 +206,7 @@ fn call_dynamic_get_lastest_ver(log_path: String) -> Option<String> {
             Err(_) => {
                 log_this(LogData {
                     importance: scorched::LogImportance::Warning,
-                    message: "Failed to load update_check cdylib".to_string(),
+                    message: "Failed to load update_check cdylib, the file may not be present or damaged, if this is a mistake please try reinstalling".to_string(),
                 });
                 return None;
             }
@@ -228,7 +228,7 @@ fn call_dynamic_get_lastest_ver(log_path: String) -> Option<String> {
             None => {
                 log_this(LogData {
                     importance: scorched::LogImportance::Warning,
-                    message: "Cdylib failed to get the lastest version".to_string(),
+                    message: "Cdylib failed to get the lastest version, make sure you have a stable connection".to_string(),
                 });
                 None
             }

@@ -10,3 +10,5 @@
 [x] Create a justfile for building the plugins/dylibs
     [ ] Figure out how to make it build the bins into the installer with inno setup command line
 [-] Write own wooting lib bindings or smth
+[ ] Write advanced firmware management plugin
+[ ] Write a place that displays all plugin version info

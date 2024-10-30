@@ -7,12 +7,12 @@ pub extern "C" fn get_lastest_ver(log_path: String) -> Option<String> {
 
     match get_version_info() {
         Ok(version) => {
-            logf!(Info, "Successfully got lastest version info: {}", version);
+            logf!(Info, "Successfully fetched lastest version: {}", version);
 
             Some(version)
         }
         Err(err) => {
-            logf!(Error, "Failed to get latest version info because of the following error: {}", err);
+            logf!(Error, "Failed to get latest version because of the following error: {}", err);
 
             None
         }
@@ -37,6 +37,6 @@ fn get_version_info() -> Result<String, Box<dyn std::error::Error>> {
 
     match json["tag_name"].as_str() {
         Some(tag_name) => Ok(tag_name.to_string()),
-        None => Err("Failed to get tag_name".into()),
+        None => Err("Failed to get tag_name element in json".into()),
     }
 }
