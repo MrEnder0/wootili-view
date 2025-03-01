@@ -9,6 +9,8 @@ use ron::{
 use scorched::*;
 use serde::{Deserialize, Serialize};
 
+use super::paths;
+
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub config_version: u8,
@@ -27,7 +29,7 @@ pub struct Config {
 pub static CONFIG_VERSION: u8 = 3;
 
 pub fn read_config() -> Option<Config> {
-    let config_file = File::open(crate::paths::config_path().join("config.ron"))
+    let config_file = File::open(super::paths::config_path().join("config.ron"))
         .log_expect(LogImportance::Error, "Unable to open config file");
     let config: Config = match from_reader(config_file) {
         Ok(x) => x,
@@ -81,7 +83,7 @@ pub fn gen_config() {
 
     let config_str = to_string_pretty(&data, config)
         .log_expect(LogImportance::Error, "Unable to serialize default config");
-    std::fs::write(crate::paths::config_path().join("config.ron"), config_str)
+    std::fs::write(paths::config_path().join("config.ron"), config_str)
         .log_expect(LogImportance::Error, "Unable to write config file");
 
     log_this(LogData {
@@ -92,7 +94,7 @@ pub fn gen_config() {
 
 pub fn config_exists() -> bool {
     std::path::Path::new(
-        crate::paths::config_path()
+        paths::config_path()
             .join("config.ron")
             .to_str()
             .log_expect(LogImportance::Error, "Failed to convert config path to str"),
@@ -164,12 +166,12 @@ pub fn save_config_option(new: ConfigChange, toasts: &mut Toasts) {
 
     let config_str = to_string_pretty(&data, config)
         .log_expect(LogImportance::Error, "Unable to serialize config");
-    std::fs::write(crate::paths::config_path().join("config.ron"), config_str)
+    std::fs::write(paths::config_path().join("config.ron"), config_str)
         .log_expect(LogImportance::Error, "Unable to write config file");
 }
 
 pub fn reset_config() {
-    std::fs::remove_file(crate::paths::config_path().join("config.ron"))
+    std::fs::remove_file(paths::config_path().join("config.ron"))
         .log_expect(LogImportance::Error, "Unable to delete config file");
 
     gen_config();

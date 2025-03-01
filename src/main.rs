@@ -1,31 +1,36 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod capture;
-mod config;
-mod paths;
-mod ui;
-mod wooting;
+mod utils;
 
-use capture::{capture, CAPTURE_PREVIEW, CAPTURE_SETTINGS};
-use config::*;
 use eframe::{egui, emath::Rangef};
 use egui_notify::Toasts;
 use image::imageops::FilterType;
 use scorched::{logf, LogData, LogImportance};
-use std::{sync::atomic::Ordering, time::Duration};
-use ui::*;
+use std::{
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
+use utils::{
+    capture::*,
+    config::*,
+    plugins::{get_available_plugins, update_check_ui, Plugin},
+    ui::*,
+    wooting,
+};
 use xcap::Monitor;
 
-use crate::capture::{CaptureSettings, CAPTURE_LOCK, CAPTURE_SETTINGS_RELOAD};
+pub static CLOSE_APP: AtomicBool = AtomicBool::new(false);
 
 fn main() -> Result<(), eframe::Error> {
-    scorched::set_logging_path(format!("{}/", paths::logging_path().as_path().display()).as_str());
+    scorched::set_logging_path(
+        format!("{}/", utils::paths::logging_path().as_path().display()).as_str(),
+    );
 
     if !config_exists() {
         gen_config();
     }
 
-    wooting::update_rgb();
+    utils::wooting::update_rgb();
 
     CAPTURE_LOCK.store(true, Ordering::Relaxed);
 
@@ -34,19 +39,24 @@ fn main() -> Result<(), eframe::Error> {
         capture();
     });
 
-    eframe::run_native(
-        "Wootili-View",
-        eframe::NativeOptions {
-            centered: true,
-            ..Default::default()
-        },
-        Box::new(move |_cc| Ok(Box::<MyApp>::default())),
-    )
+    while CLOSE_APP.load(Ordering::Relaxed) == false {
+        eframe::run_native(
+            "Wootili-View",
+            eframe::NativeOptions {
+                centered: true,
+                ..Default::default()
+            },
+            Box::new(move |_cc| Ok(Box::<MyApp>::default())),
+        )?;
+    }
+
+    Ok(())
 }
 
 struct MyApp {
     toasts: Toasts,
-    init: bool,
+    is_startup: bool,
+    plugins: Vec<Plugin>,
     device_name: String,
     brightness: u8,
     reduce_bright_effects: bool,
@@ -68,7 +78,8 @@ impl Default for MyApp {
     fn default() -> Self {
         Self {
             toasts: Toasts::default(),
-            init: true,
+            is_startup: true,
+            plugins: get_available_plugins(),
             device_name: wooting::get_device_name(),
             brightness: 100,
             reduce_bright_effects: false,
@@ -90,7 +101,7 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.init {
+        if self.is_startup {
             if !cfg!(windows) {
                 self.toasts
                     .error("This application is not supported on your operating system")
@@ -156,7 +167,7 @@ impl eframe::App for MyApp {
                 ctx.set_visuals(egui::Visuals::light());
             }
 
-            self.init = false;
+            self.is_startup = false;
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -280,11 +291,19 @@ impl eframe::App for MyApp {
 
             clean_logs_button(ui, &mut self.toasts);
 
-            egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
-                version_footer(ui, self.check_updates);
-            });
+            // Rewriten plugin rendering
+            //write code that looks threw self.plugins for a plugin struct with the name being file_import and then pass the lib to import_file_ui
+            if let Some(plugin) = self
+                .plugins
+                .iter()
+                .find(|plugin| plugin.name == "update_check")
+            {
+                egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
+                    update_check_ui(plugin.lib.clone(), ui, utils::paths::logging_path().to_string_lossy().to_string());
+                });
+            }
 
-            if !self.init {
+            if !self.is_startup {
                 egui::SidePanel::right("lighting_preview_panel").width_range(Rangef::new((self.rgb_size.0 * 15) as f32, (self.rgb_size.0 * 22) as f32)).show(ctx, |ui| {
                     if self.display_rgb_preview {
                         match CAPTURE_PREVIEW.read().unwrap().clone() {
@@ -297,7 +316,7 @@ impl eframe::App for MyApp {
                         }
                         //rgb_preview(ui, frame_rgb_size, CAPTURE_PREVIEW.read().unwrap().clone());
                     }
-                    display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.device_version, &mut self.init, frame_rgb_size);
+                    display_device_info(ui, &mut self.toasts, &mut self.device_name, &mut self.device_creation, &mut self.device_version, &mut self.is_startup, frame_rgb_size);
                 });
             }
         });

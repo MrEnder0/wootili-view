@@ -2,7 +2,6 @@ use std::ffi::CStr;
 
 use image::GenericImageView;
 use scorched::{logf, LogData, LogExpect, LogImportance};
-use ver_cmp::compare_versions;
 use wooting_rgb_sys as wooting;
 
 pub fn get_rgb_size() -> Option<(u32, u32)> {
