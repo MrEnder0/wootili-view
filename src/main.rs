@@ -239,8 +239,15 @@ impl eframe::App for MyApp {
                     ctx.set_visuals(egui::Visuals::light());
                 }
             }
-            if ui.checkbox(&mut self.check_updates, "Check for Updates").on_hover_text("Checks for updates on startup, wont apply to current session").changed() {
-                save_config_option(ConfigChange::CheckUpdates(self.check_updates), &mut self.toasts);
+
+            if let Some(_) = self
+                .plugins
+                .iter()
+                .find(|plugin| plugin.name == "update_check")
+            {
+                if ui.checkbox(&mut self.check_updates, "Check for Updates").on_hover_text("Checks for updates on startup, wont apply to current session").changed() {
+                    save_config_option(ConfigChange::CheckUpdates(self.check_updates), &mut self.toasts);
+                }
             }
 
             if ui.button("Reset Config").on_hover_text("Warning: Resets the config to the default values").clicked() {
