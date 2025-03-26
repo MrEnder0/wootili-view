@@ -230,6 +230,18 @@ impl eframe::App for MyApp {
             ui.separator();
 
             ui.heading("Application");
+            ui.horizontal(|ui| {
+                ui.label("Loaded Plugins:").on_hover_ui(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Plugins: ");
+                        for plugin in self.plugins.iter() {
+                            ui.label(plugin.name.clone());
+                        }
+                    });
+                });
+                ui.label(format!("{}", self.plugins.len()));
+            });
+
             if ui.checkbox(&mut self.dark_mode, "Darkmode").on_hover_text("Enables darkmode").changed() {
                 save_config_option(ConfigChange::Darkmode(self.dark_mode), &mut self.toasts);
 
