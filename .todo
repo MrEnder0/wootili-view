@@ -12,5 +12,5 @@
 [-] Write own wooting lib bindings or smth
 [ ] Write advanced firmware management plugin
 [ ] Write a place that displays all plugin version info
-[ ] Rewrite plugin system
+[x] Rewrite plugin system
     [x] Update update check plugin
