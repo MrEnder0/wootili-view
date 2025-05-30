@@ -11,7 +11,7 @@ Wootili-View is a project designed to enhance your Wooting device by providing a
 
 ## How It Works
 
-The functionality of this project is straightforward. The program captures screenshots of your specified display, downscaling them to match the size of your Wooting device's RGB layout. Subsequently, it maps the colors from the downscaled screenshots to the corresponding keys on your Wooting device, producing a captivating ambilight effect.
+The functionality of this project is straightforward process. The program captures screenshots of your specified display, then the program downscales it to match the size of your Wooting device's RGB layout. Subsequently, it maps the colors from the downscaled screenshots to the corresponding keys on your Wooting device, producing a captivating ambilight effect.
 
 ## Getting Started
 
