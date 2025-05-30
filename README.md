@@ -2,6 +2,9 @@
 
 ![app_preview](https://github.com/MrEnder0/wootili-view/blob/master/.github/assets/app_preview.png?raw=true)
 
+> [!IMPORTANT]
+> I plan on doing a full rewrite to this software, this will overhaul the rgb controlling and the ui!
+
 ## About
 
 Wootili-View is a project designed to enhance your Wooting device by providing an ambient lighting effect. This software allows you to map a downscaled version of your screen onto your Wooting keyboard, creating a dynamic and immersive ambilight experience.
